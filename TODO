@@ -1,0 +1,17 @@
+1. script for importing keys and fingerprints from pidgin.. into otrtalk..
+   safer than pointing otrtalk profile to pidgin files!
+
+
+2. additional commands for managing buddies and keys
+
+otrtalk buddy list
+otrtalk buddy info [buddy]
+otrtalk buddy add [alias] [id]
+otrtalk buddy remove [alias]
+
+otrtalk key generate accountname protocol
+otrtalk key list
+otrtalk key find accountname protocol
+otrtalk key import accountname protocol filename/json/
+otrtalk key export
+
