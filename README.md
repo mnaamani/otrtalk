@@ -25,21 +25,3 @@ otrtalk doesn't depend on servers or datacenters. However some nodes/servers act
 ### Installing
 
     npm install otrtalk
-
-### Usage
-
-  Usage: otrtalk [options] [command]
-
-  Commands:
-
-    connect [buddy]        establish new trust with buddy
-    chat [buddy]           chat with trusted buddy
-    profiles [list|info|add|remove] [profile] [accountname] [protocol] [keys] [instags] [fingerprints] manage profiles
-
-  Options:
-
-    -h, --help               output usage information
-    -V, --version            output the version number
-    -p, --profile [profile]  profile to use
-    -s, --secret [secret]    secret to use in connect mode for smp authentication
-    -o, --otr [module]       specify otr module to use
