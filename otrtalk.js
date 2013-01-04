@@ -9,12 +9,12 @@ var Chat = require("./lib/chat");
 
 var otr;
 var otr_modules = {
-    "3":"otr3",
-    "4em":"otr4-em"
+    "otr3":"otr3",
+    "otr4-em":"otr4-em"
 }
-function OTR_INSTANCE(){
+function OTR_INSTANCE(choice){
     if(otr) return otr;//only one global instance
-    var otr_mod =  program.otr ? otr_modules[program.otr] : '4em';
+    var otr_mod =  choice ? otr_modules[choice] : 'otr4-em';
     otr = otr_mod ? require(otr_mod) : undefined;
     return otr;
 }
@@ -28,9 +28,9 @@ function main(){
   init_stdin_stderr();
   program
     .version("0.0.1")
-    .option("-p, --profile [profile]","profile to use in chat/connect modes. uses default if not specified","default")
+    .option("-p, --profile [profile]","profile to use in chat/connect modes","default")
     .option("-s, --secret [secret]","secret to use in connect mode for smp authentication","")
-    .option("-o, --otr [module]","specify otr module to use","4em");
+    .option("-o, --otr [otr4-em|otr3]","specify otr module to use for profile","otr4-em");//only takes effect when creating a profile
 
   program
   .command('connect [buddy]')
@@ -97,7 +97,7 @@ function otrtalk(use_profile,buddy,talk_mode){
             }
             console.log("[ok]");
             process.stdout.write("\notr module check: ");
-            if(!OTR_INSTANCE()){
+            if(!OTR_INSTANCE(Talk.profile.otr)){
              console.log("invalid otr module.");
              process.exit();
             }
@@ -161,10 +161,10 @@ function getProfile( pm, name, next ){
           console.log("Enter the otrtalk id for this profile. This is a public name that you give out to your buddies.");
           program.prompt("otrtalk id: ",function(accountname){
             if(!accountname) {next();return;}
-            pm.add(name,{
+            next(pm.add(name,{
                 accountname:accountname,
-            });
-            next(pm.profile(name));
+                otr:program.otr
+            }));
           });
         }else next();
      });
@@ -173,10 +173,10 @@ function getProfile( pm, name, next ){
      console.log("Enter the otrtalk id for this profile. This is a public name that you give out to your buddies.");
      program.prompt("otrtalk id: ",function(accountname){
         if(!accountname) {next();return;}
-        pm.add(name,{
+        next(pm.add(name,{
             accountname:accountname,
-        });
-        next(pm.profile(name));
+            otr:program.otr
+        }));
      });
     }
 }
@@ -413,10 +413,10 @@ function profile_manage(action, profilename, accountname){
                 if(!profile){
                     if(!accountname){ console.log("no otrtalk id specified"); break;}
                     //create profile with default settings..
-                    pm.add(profilename,{
+                    profile = pm.add(profilename,{
                      accountname:accountname,
+                     otr:program.otr
                     });
-                    profile = pm.profile(profilename);
                     if(profile) {
                         console.log("Created Profile:",profilename);
                         profile.print();
