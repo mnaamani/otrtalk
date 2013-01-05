@@ -27,7 +27,7 @@ function main(){
   var got_command = false;
   init_stdin_stderr();
   program
-    .version("0.0.1")
+    .version("0.0.3")
     .option("-p, --profile [profile]","profile to use in chat/connect modes","default")
     .option("-s, --secret [secret]","secret to use in connect mode for smp authentication","")
     .option("-o, --otr [otr4-em|otr3]","specify otr module to use for profile","otr4-em");//only takes effect when creating a profile
