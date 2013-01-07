@@ -29,8 +29,10 @@ function main(){
   program
     .version("0.0.3")
     .option("-p, --profile [profile]","profile to use in chat/connect modes","default")
-    .option("-s, --secret [secret]","secret to use in connect mode for smp authentication","")
+    .option("-f, --fingerprint [fingerprint]","public key fingerprint of buddy to connect with [connect mode]","")
+    .option("-s, --secret [secret]","secret to use for SMP authentication [connect mode]","")
     .option("-o, --otr [otr4-em|otr3]","specify otr module to use for profile","otr4-em");//only takes effect when creating a profile
+    
 
   program
   .command('connect [buddy]')
@@ -125,30 +127,72 @@ function otrtalk(use_profile,buddy,talk_mode){
                         //unless we --force-connect to allow a new fingerprint to be discovered..(in such case will
                         //a new fingerprint overwrite the old one when saved to file?
                         //clear userstate.. (new one will be created for each incoming connection)
+                        console.log("Using DSA Key fingerprint:",Talk.user.fingerprint(Talk.accountname,Talk.protocol));
                         Talk.user.state.free();
                         delete Talk.user.state;
                         delete Talk.user;
                         console.log("[ok]");
                         Network = require("./lib/network");
-                        //ensure we have a secret if we are in connect mode.
-                        if(talk_mode =='connect' && !program.secret){
+                        //esnure fingerprint if entered as option is correctly formatted
+                        ensureFingerprint(program.fingerprint,function(valid_fingerprint){
+                          if(talk_mode == 'connect'){
+                            if(program.fingerprint && !valid_fingerprint){
+                              console.log("Invalid fingerprint provided");
+                              process.exit();
+                            }
+                            if(valid_fingerprint){ 
+                                Talk.fingerprint = valid_fingerprint;
+                                console.log("Will look for buddy with fingerprint:",Talk.fingerprint);
+                            }
+                          }
+                          //ensure we have a secret if we are in connect mode.
+                          if(talk_mode =='connect' && !program.secret){
                             console.log("\nWhen establishing a new trust with a buddy you must provide a shared secret.");
-                            console.log("This will be used for discovering a buddy using SMP authentication.");
-                            console.log("Your buddy must be actively trying to connect at the same time.");
+                            console.log("This will be used by SMP authentication during connection establishment.");
                             program.password("Enter SMP secret: ","*",function(secret){
                                Talk.secret = secret;
                                startTalking(Talk);
                             });
-                        }else{
+                          }else{
                             Talk.secret = program.secret;
                             startTalking(Talk);
 
-                        }
+                          }
+                        });
                     });
                 });
             });
         });
     });
+}
+function ensureFingerprint(fp, next){
+    if(fp){
+        next(validateFP(fp));
+        //force fingerpint entry in connect mode?
+    }else next();
+}
+
+function validateFP(str){
+    //acceptable formats
+    //(5 segements of 8 chars each with white optional space inbetween)
+    //F88D5DFD BDB1C0A3 0D7543FF 2DF6F58C 28AE3F42
+    if(!str) return;
+    var valid = true;
+    var segments = []; 
+    str.match( /(\s?\w+\s?)/ig ).forEach(function(segment){        
+        segments.push(segment.toUpperCase().trim());
+    });    
+    if(segments.length == 5 ){
+      segments.forEach(function(seg){
+        if( !seg.match(/^[A-F0-9]{8}$/) ) valid = false;
+      });
+
+      if(valid) return segments.join(" ");
+    }else if(segments.length == 1){
+       if(!segments[0].match( /^[A-F0-9]{40}$/)) return;
+       return segments[0].match(/([A-F0-9]{8})/g).join(" ");
+    }else return;
+
 }
 
 function getProfile( pm, name, next ){
@@ -328,7 +372,8 @@ function incomingConnection(talk,peer,response){
             buddy : talk.buddy,
             buddyID : talk.buddyID,
             files : talk.files,
-            secret : talk.secret
+            secret : talk.secret,
+            buddyFP : talk.fingerprint
         }, otr, peer,response);
 
     //when a session is authenticated - will happen only once!
