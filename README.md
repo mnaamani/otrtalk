@@ -24,7 +24,7 @@ otrtalk doesn't depend on servers or datacenters. However some nodes/servers act
 
 ### Installing
 
-    npm install otrtalk
+    npm -g install otrtalk
     
 ### Quick Setup
 
