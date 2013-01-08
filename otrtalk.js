@@ -2,6 +2,7 @@
 
 var program = require("commander");
 var fs = require("fs");
+var path = require("path");
 var assert = require("assert");
 var Network;
 var SessionManager = require("./lib/sessions");
@@ -21,19 +22,16 @@ function OTR_INSTANCE(choice){
 
 process.title = "otrtalk";
 
-main();//process commands and options..
-
 function main(){
   var got_command = false;
   init_stdin_stderr();
   program
     .version("0.0.3")
-    .option("-p, --profile [profile]","profile to use in chat/connect modes","default")
+    .option("-p, --profile [profile]","specify profile to use","default")
     .option("-f, --fingerprint [fingerprint]","public key fingerprint of buddy to connect with [connect mode]","")
     .option("-s, --secret [secret]","secret to use for SMP authentication [connect mode]","")
     .option("-o, --otr [otr4-em|otr3]","specify otr module to use for profile","otr4-em");//only takes effect when creating a profile
     
-
   program
   .command('connect [buddy]')
   .description('establish new trust with buddy')
@@ -57,6 +55,14 @@ function main(){
         got_command = true;
         profile_manage.apply(this,arguments);
      });
+
+  program
+    .command('import [key|buddy|buddies] [application] [accountname] [protocol] [profile] [otrtalk-id]')
+    .description('import a key or buddy from other applications into profile')
+    .action( function(what,app,accountname,protocol,profile,id){
+        got_command = true;
+        import_wizard(what,app,accountname,protocol,profile,id);
+    });
 
   program.parse(process.argv);
   process.stdin.on('end', shutdown );
@@ -85,6 +91,7 @@ function otrtalk(use_profile,buddy,talk_mode){
         if(!profile) process.exit();
         console.log("[ok]");
         Talk.profile = profile;
+        Talk.id = Talk.profile.id;//otrtalk id
         Talk.accountname = Talk.profile.accountname;
         Talk.protocol = Talk.profile.protocol;
 
@@ -292,7 +299,7 @@ function accessKeyStore(profile,buddy,VFS,create,next){
         program.password('      confirm password: ', '', function(password_confirm){
                 if(password !== password_confirm){
                     console.log("passwords don't match!");
-                    next(false);
+                    next();
                 }else{
                     openKeyStore(profile,buddy,VFS,password,next);
                 }
@@ -346,7 +353,7 @@ function ensureInstag(user,accountname,protocol,next){
  }
 
 function startTalking(talk){
-    talk.link = new Network.Link(talk.accountname, talk.buddyID);
+    talk.link = new Network.Link(talk.id || talk.accountname, talk.buddyID);
 
     console.log("\nStarting Network.");
     Network.init(function(){
@@ -427,8 +434,9 @@ function startChat(talk,session,fingerprint){
 }
 ////// Profiles Command
 function profile_manage(action, profilename, accountname){
-    var pm = require("./lib/profiles");    
+    var pm = require("./lib/profiles");  
     var profile;
+    profilename = profilename || program.profile;
     if(!action){
            pm.list();
     }else{
@@ -437,23 +445,23 @@ function profile_manage(action, profilename, accountname){
                  pm.list();
                  break;
             case 'info':
-                if(!profilename) return;                
+                if(!profilename) {console.log("profilename not specified");return;}
                 profile = pm.profile(profilename);
                 if(!profile) {console.log('profile "'+profilename+'" not found.');break;}
                 profile.print();
                 otr = OTR_INSTANCE();
                 accessKeyStore(profile,undefined,(otr.VFS?otr.VFS():undefined),false,function(files){
                     if(files){
-                        console.log("\t=== Keys ===");
+                        console.log("=== Keys ===");
                         var user = new otr.User( files );
                         user.accounts().forEach(function(account){
-                            console.log("otrtalk id:",account.accountname," fingerprint:",account.fingerprint);
+                            console.log("accountname:",account.accountname,"protocol:",account.protocol,"fingerprint:",account.fingerprint);
                         });
                     }
                 });
                 break;
             case 'add':
-                if(!profilename) return;
+                if(!profilename) {console.log("profilename not specified");return;}
                 profile = pm.profile(profilename);
                 if(!profile){
                     if(!accountname){ console.log("no otrtalk id specified"); break;}
@@ -470,7 +478,7 @@ function profile_manage(action, profilename, accountname){
                 }else console.log(profilename,"profile already exists!");
                 break;
             case 'remove':
-                if(!profilename) return;
+                if(!profilename) {console.log("profilename not specified");return;}
                 profile = pm.profile(profilename);
                 if(profile){
                    program.confirm("are you sure you want to remove profile: "+profilename+"? ",function(ok){
@@ -502,3 +510,121 @@ function shutdown(){
     },300);
 }
 
+function import_wizard(what,app,accountname,protocol,profilename,id){
+    var filename;
+    profilename = profilename || program.profile;
+    if(!profilename) {
+          console.log("target profile name for import not specified!\n");
+          return;
+    }   
+    if(what!='key' && what!='buddy' && what !='buddies'){
+      console.log("Cannot import",what);
+      return;
+    }
+    if(!app){
+      console.log("You did not specify an application.")
+      console.log("supported applications: pidgin, adium");
+      return;
+    }
+    if(what=='key'){
+      if(IMAPPS[app]){
+      if(IMAPPS[app][process.platform]){
+          filename = resolve_home_path(IMAPPS[app][process.platform].keys);
+          if(fs.existsSync(filename)){
+            do_import_key(filename,accountname,protocol,profilename,id);
+          }else{
+            console.log("keystore file not found:",filename);
+          }          
+      }else{
+        console.log("I don't know how to import",app,"keys on this platform.");
+        //display a list of supported apps on this platform.
+      }
+      }else{
+        console.log("I don't know about this application:",app);
+        //display list of supported apps..
+      }
+    }else{
+      console.log("only key import currently implemented.")
+    }
+
+}
+function do_import_key(filename,accountname,protocol,profilename,id){
+    var UserFiles = require("./lib/files").UserFiles;
+    var pm = require("./lib/profiles");
+    
+    var VFS;
+    var target = {};
+    var source = {};
+    var key;
+
+    var profile = pm.profile(profilename);//check if profile already exists - don't overwrite!
+    if(profile){
+      console.log("Profile '"+profilename+"' already exists. Please specify a different profile to import into.");
+      return;
+    }
+    otr = require("otr4-em");
+    VFS = otr.VFS();
+    console.log("checking application files..");
+    source.files = new UserFiles({keys:filename,fingerprints:"/tmp/tmp.fp",instags:'/tmp/tmp.tag'},null,VFS);
+    source.user = new otr.User(source.files);
+    
+    if(!accountname || !protocol){
+        console.log("Please specify an accountname and protocol. Availbale accounts to import:");
+        source.user.accounts().forEach(function(account){
+          console.log("accountname:",account.accountname,"protocol:",account.protocol,"fingerprint:",account.fingerprint);
+        });
+    }else{
+        key = source.user.findKey(accountname,protocol);
+        if(key){
+            console.log("creating new profile",profilename);
+            profile = pm.add(profilename,{id:id,accountname:accountname,protocol:protocol,otr:"otr4-em"},false,true);
+            if(!profile){
+              console.log("error adding new new profile!");
+              return;
+            }
+            accessKeyStore(profile,null,VFS,true,function(user_files){
+                target.files = user_files;
+                if(target.files){
+                  try{
+                  //make sure import and export files are different paths
+                  if(target.files.keys == source.files.keys || target.files.fingerprints == source.files.fingerprints){
+                    console.log("keystore file conflict!");
+                    return;
+                  }
+                  target.user = new otr.User(target.files);
+                  target.user.importKey(accountname,protocol,key.export());
+                  target.files.save();
+                  pm.save();
+                  console.log("Imported Keys Successfully to profile:",profilename);
+                  profile.print();
+                  return;//success
+                }catch(E){
+                  pm.remove(profilename);
+                  console.log("Key Import Failed!",E);
+                }
+              }else{
+                console.log("error creating new keystore files.");
+              }
+            });
+        }else{
+          console.log("Account not found:",accountname,protocol);      
+        }
+    }
+}
+function resolve_home_path(str){
+   return str.replace("~", process.env[process.platform=='win32'?'USERPROFILE':'HOME']);
+}
+
+//platform specific paths to private key stores
+//pidgin,adium,gaim,trillian
+var IMAPPS = {
+  'pidgin':{
+    'linux': {keys:'~/.purple/otr.private_key',fingerprint:'~/.purple/otr.fingerprint'},
+    'darwin': {keys:'~/.purple/otr.private_key',fingerprint:'~/.purple/otr.fingerprint'}
+  },
+  'adium':{
+    'darwin':{keys:'~/Library/Application Support/Adium 2.0/Users/Default/otr.private_key'}
+  }
+};
+
+main();//process commands and options.
