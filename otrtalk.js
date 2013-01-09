@@ -616,14 +616,15 @@ function resolve_home_path(str){
 }
 
 //platform specific paths to private key stores
-//pidgin,adium,gaim,trillian
 var IMAPPS = {
   'pidgin':{
-    'linux': {keys:'~/.purple/otr.private_key',fingerprint:'~/.purple/otr.fingerprint'},
-    'darwin': {keys:'~/.purple/otr.private_key',fingerprint:'~/.purple/otr.fingerprint'}
+    'linux': {keys:'~/.purple/otr.private_key',fingerprints:'~/.purple/otr.fingerprints'},
+    'darwin': {keys:'~/.purple/otr.private_key',fingerprints:'~/.purple/otr.fingerprints'},
+    'win32': {keys:'~/Application Data/.purple/otr.private_key',fingerprints:'~/Application Data/.purple/otr.fingerprints'}
   },
   'adium':{
-    'darwin':{keys:'~/Library/Application Support/Adium 2.0/Users/Default/otr.private_key'}
+    'darwin':{keys:'~/Library/Application Support/Adium 2.0/Users/Default/otr.private_key',
+              fingerprints:'~/Library/Application Support/Adium 2.0/Users/Default/otr.fingerprints'}
   }
 };
 
