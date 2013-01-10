@@ -30,6 +30,8 @@ function main(){
     .option("-p, --profile [profile]","specify profile to use","default")
     .option("-f, --fingerprint [fingerprint]","public key fingerprint of buddy to connect with [connect mode]","")
     .option("-s, --secret [secret]","secret to use for SMP authentication [connect mode]","")
+    .option("--pidgin","check pidgin buddylist for known fingerprints [connect mode]","")
+    .option("--adium","check adium buddylist for known fingerprints [connect mode]","")
     .option("-o, --otr [otr4-em|otr3]","specify otr module to use for profile","otr4-em");//only takes effect when creating a profile
     
   program
@@ -57,11 +59,11 @@ function main(){
      });
 
   program
-    .command('import [key|buddy|buddies] [application] [accountname] [protocol] [profile] [otrtalk-id]')
-    .description('import a key or buddy from other applications into profile')
-    .action( function(what,app,accountname,protocol,profile,id){
+    .command('import-key [application] [accountname] [protocol] [profile] [otrtalk-id]')
+    .description('import a key from pidgin/adium into new profile')
+    .action( function(app,accountname,protocol,profile,id){
         got_command = true;
-        import_wizard(what,app,accountname,protocol,profile,id);
+        import_key_wizard(app,accountname,protocol,profile,id);
     });
 
   program.parse(process.argv);
@@ -130,7 +132,7 @@ function otrtalk(use_profile,buddy,talk_mode){
                             process.exit();
                         }
                         if(result=='new') Talk.files.save();//save newly created instance tag
-                        //todo if buddy we are connecting to already has a trusted fingerprint, switch to chat mode
+                         //todo if buddy we are connecting to already has a trusted fingerprint, switch to chat mode
                         //unless we --force-connect to allow a new fingerprint to be discovered..(in such case will
                         //a new fingerprint overwrite the old one when saved to file?
                         //clear userstate.. (new one will be created for each incoming connection)
@@ -150,6 +152,10 @@ function otrtalk(use_profile,buddy,talk_mode){
                             if(valid_fingerprint){ 
                                 Talk.fingerprint = valid_fingerprint;
                                 console.log("Will look for buddy with fingerprint:",Talk.fingerprint);
+                            }
+                            if(program.pidgin || program.adium){
+                                console.log("parsing IM app fingerprints");
+                                Talk.trusted_fingerprints = imapp_fingerprints_parse();
                             }
                           }
                           //ensure we have a secret if we are in connect mode.
@@ -380,7 +386,8 @@ function incomingConnection(talk,peer,response){
             buddyID : talk.buddyID,
             files : talk.files,
             secret : talk.secret,
-            buddyFP : talk.fingerprint
+            buddyFP : talk.fingerprint,
+            trustedFP: talk.trusted_fingerprints
         }, otr, peer,response);
 
     //when a session is authenticated - will happen only once!
@@ -510,24 +517,19 @@ function shutdown(){
     },300);
 }
 
-function import_wizard(what,app,accountname,protocol,profilename,id){
+function import_key_wizard(app,accountname,protocol,profilename,id){
     var filename;
     profilename = profilename || program.profile;
     if(!profilename) {
           console.log("target profile name for import not specified!\n");
           return;
     }   
-    if(what!='key' && what!='buddy' && what !='buddies'){
-      console.log("Cannot import",what);
-      return;
-    }
     if(!app){
       console.log("You did not specify an application.")
-      console.log("supported applications: pidgin, adium");
+      console.log("specify either: pidgin or adium");
       return;
     }
-    if(what=='key'){
-      if(IMAPPS[app]){
+    if(IMAPPS[app]){
       if(IMAPPS[app][process.platform]){
           filename = resolve_home_path(IMAPPS[app][process.platform].keys);
           if(fs.existsSync(filename)){
@@ -537,17 +539,12 @@ function import_wizard(what,app,accountname,protocol,profilename,id){
           }          
       }else{
         console.log("I don't know how to import",app,"keys on this platform.");
-        //display a list of supported apps on this platform.
-      }
-      }else{
-        console.log("I don't know about this application:",app);
-        //display list of supported apps..
       }
     }else{
-      console.log("only key import currently implemented.")
+        console.log("I don't know about this application:",app);
     }
-
 }
+
 function do_import_key(filename,accountname,protocol,profilename,id){
     var UserFiles = require("./lib/files").UserFiles;
     var pm = require("./lib/profiles");
@@ -611,6 +608,50 @@ function do_import_key(filename,accountname,protocol,profilename,id){
         }
     }
 }
+
+function imapp_fingerprints_parse(){
+    var filename;
+    var app;
+    var parsed = {
+        entries:[]
+    };
+    app = program.pidgin ? "pidgin" : app;
+    app = program.adium  ? "adium"  : app;
+
+    if(IMAPPS[app]){
+      if(IMAPPS[app][process.platform]){
+          filename = resolve_home_path(IMAPPS[app][process.platform].fingerprints);
+          if(fs.existsSync(filename)){
+            //buddy-username    accountname     protocol    fingerprint     smp
+            var buddies = fs.readFileSync(filename,"utf-8").split('\n');
+            if(buddies && buddies.length){
+                buddies.forEach(function(line){
+                    var entry = line.split(/\s+/);
+                    if(entry.length == 5 && entry[4]=='smp') parsed.entries.push({
+                        username:entry[0],
+                        accountname:entry[1],
+                        protocol:entry[2],
+                        fingerprint:entry[3]
+                    });
+                });
+            }
+          }
+      }
+    }
+    parsed.match = imapp_fingerprints_match;
+    return parsed;
+}
+
+function imapp_fingerprints_match(fp){
+    var match;
+    if(this.entries.length){
+      this.entries.forEach(function(entry){
+        if(entry.fingerprint.toUpperCase() == fp.replace(/\s/g,"")) match = entry;
+      });
+    }
+    return match;
+}
+
 function resolve_home_path(str){
    return str.replace("~", process.env[process.platform=='win32'?'USERPROFILE':'HOME']);
 }
