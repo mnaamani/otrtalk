@@ -494,10 +494,6 @@ function profile_manage(action, profilename, accountname){
                    program.confirm("are you sure you want to remove profile: "+profilename+"? ",function(ok){
                        if(ok){
                          pm.remove(profilename);
-                         /*
-                         program.confirm("delete keystore and fingerprints store? ",function(ok){
-                         });
-                         */
                          process.exit();
                        }else process.exit();
                    });
