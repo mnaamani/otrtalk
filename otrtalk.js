@@ -394,8 +394,6 @@ function incomingConnection(talk,peer,response){
     session.on("auth",function( fingerprint, state){   
        var this_session = this;
        console.log("[verifying connection]");
-       //idea filter by short key-id which we can pass on command line.. 
-       //(pgp key-id:http://www.pgp.net/pgpnet/pgp-faq/pgp-faq-keys.html)
        switch( talk.MODE ){
          case 'chat':
                assert(state.Trusted && !state.NewFingerprint);
@@ -416,7 +414,6 @@ function incomingConnection(talk,peer,response){
                     console.log("[rejecting connection]");
                     this_session.end();
                 }else{
-                     //todo-remove unauthenticated fingerprints from userstate before writing to file!
                     this_session.writeAuthenticatedFingerprints();
                     startChat(talk,this_session,fingerprint);
                 }
@@ -459,11 +456,16 @@ function profile_manage(action, profilename, accountname){
                 otr = OTR_INSTANCE();
                 accessKeyStore(profile,undefined,(otr.VFS?otr.VFS():undefined),false,function(files){
                     if(files){
-                        console.log("=== Keys ===");
+                        console.log(" == Keystore");
+                        var Table = require("cli-table");
+                        var table = new Table({
+                            head:['accountname','protocol','fingerprint']
+                        });
                         var user = new otr.User( files );
                         user.accounts().forEach(function(account){
-                            console.log("accountname:",account.accountname,"protocol:",account.protocol,"fingerprint:",account.fingerprint);
+                            table.push([account.accountname,account.protocol,account.fingerprint]);
                         });
+                        console.log(table.toString());
                     }
                 });
                 break;
