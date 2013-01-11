@@ -415,6 +415,7 @@ function incomingConnection(talk,peer,response){
                     this_session.end();
                 }else{
                     this_session.writeAuthenticatedFingerprints();
+                    talk.profile.updateBuddyFingerprint( talk.buddy, fingerprint );
                     startChat(talk,this_session,fingerprint);
                 }
             });
