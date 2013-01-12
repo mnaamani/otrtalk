@@ -106,6 +106,11 @@ function otrtalk(use_profile,buddy,talk_mode){
                 console.log("Buddy has same otrtalk id as you!");
                 process.exit();
             }
+            if(talk_mode == 'chat' && !Talk.profile.buddyFP(buddy)){
+                //switch to connect mode.
+                console.log("You haven't yet established a trust with this buddy.\nSwitching to 'connect' mode.");
+                Talk.MODE = talk_mode = 'connect';
+            }
             console.log("[ok]");
             process.stdout.write("\notr module check: ");
             if(!OTR_INSTANCE(Talk.profile.otr)){
