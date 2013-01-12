@@ -269,24 +269,21 @@ function getProfile( pm, name, next ){
 function getBuddy(profile,buddy,mode,next){
     var need_new_buddy = false;
     if(!buddy){
-        if(mode=='connect'){
-          console.log("You must specify a new buddy to connect with.");
-          need_new_buddy = true;
-        }else{
-          if(profile.buddies.length){
-            console.log('Select a buddy to chat with:');
+        if(profile.buddies.length){
+            console.log('Select a buddy to',mode,'with:');
             var list = [];            
             profile.buddies.forEach(function(bud){
-                list.push( bud.alias+":"+bud.id );
+                if((bud.fingerprint && mode=='chat') || (!bud.fingerprint && mode=='connect')){
+                     list.push( bud.alias+":"+bud.id );
+                }
             });
             program.choose(list, function(i){
                 next( profile.buddies[i].alias );
             });
-          }else{
+        }else{
             console.log("No buddy specified, and your buddy list is empty.");
             need_new_buddy = true;
-          }
-        }
+        }        
     }else{
         var buddyID = profile.buddyID(buddy);
         if(buddyID){
