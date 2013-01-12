@@ -218,21 +218,19 @@ function getProfile( pm, name, next ){
     if(name){
       profile = pm.profile(name);
       if(profile) return next(profile);
-      if(pm.profiles().length){
-        console.log("Profile [",name,"] doesn't exist.");
-        program.confirm("create it now? ",function(ok){
-          if(ok){
-            console.log("Enter the otrtalk id for this profile. This is a public name that you give out to your buddies.");
-            program.prompt("otrtalk id: ",function(accountname){
+      console.log("Profile [",name,"] doesn't exist.");
+      program.confirm("create it now? ",function(ok){
+        if(ok){
+          console.log("Enter the otrtalk id for this profile. This is a public name that you give out to your buddies.");
+          program.prompt("otrtalk id: ",function(accountname){
               if(!accountname) {next();return;}
               next(pm.add(name,{
                 accountname:accountname,
                 otr:program.otr
               }));
             });
-          }else next();
-        });
-      }
+        }else next();
+      });
     }else{
         //no profile specified
         if(pm.profiles().length == 1){
@@ -245,7 +243,7 @@ function getProfile( pm, name, next ){
             pm.profiles().forEach(function(prof){
                 list.push( prof );
             });
-            console.log("Select a profile:");
+            console.log("Profile not specified, select a profile from list:");
             program.choose(list, function(i){
                 next(pm.profile(list[i]));
             });
@@ -303,7 +301,8 @@ function getBuddy(profile,buddy,mode,next){
     }
 
     if(need_new_buddy) {
-        program.prompt("Buddy name: ",function(buddy){
+        console.log("Enter new buddy details:");
+        program.prompt("alias: ",function(buddy){
             program.prompt(buddy+"'s otrtalk id: ", function(id){
                 if(!id) {next();return;}
                 profile.addBuddy(buddy,id);
@@ -619,7 +618,7 @@ function do_import_key(filename,accountname,protocol,profilename,id){
                   target.user = new otr.User(target.files);
                   target.user.importKey(accountname,protocol,key.export());
                   target.files.save();
-                  pm.save();
+                  pm.save(profilename);
                   console.log("Imported Keys Successfully to profile:",profilename);
                   profile.print();
                   return;//success
