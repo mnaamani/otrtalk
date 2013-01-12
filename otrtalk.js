@@ -27,7 +27,7 @@ function main(){
   init_stdin_stderr();
   program
     .version("0.0.3")
-    .option("-p, --profile [profile]","specify profile to use","default")
+    .option("-p, --profile [profile]","specify profile to use","")
     .option("-f, --fingerprint [fingerprint]","public key fingerprint of buddy to connect with [connect mode]","")
     .option("-s, --secret [secret]","secret to use for SMP authentication [connect mode]","")
     .option("--pidgin","check pidgin buddylist for known fingerprints [connect mode]","")
@@ -91,7 +91,7 @@ function otrtalk(use_profile,buddy,talk_mode){
     process.stdout.write("\nprofile check: ");
     getProfile(profileManager,use_profile,function(profile){
         if(!profile) process.exit();
-        console.log("[ok]");
+        console.log("[ok] using profile:",profile.name);
         Talk.profile = profile;
         Talk.id = Talk.profile.id;//otrtalk id
         Talk.accountname = Talk.profile.accountname;
@@ -214,81 +214,108 @@ function validateFP(str){
 }
 
 function getProfile( pm, name, next ){
-    var profile = pm.profile(name);
-    if(profile) return next(profile);
-    if(pm.profiles.length){
-     console.log("Profile [",name,"] doesn't exist.");
-     program.confirm("create it now? ",function(ok){
-        if(ok){
-          console.log("Enter the otrtalk id for this profile. This is a public name that you give out to your buddies.");
-          program.prompt("otrtalk id: ",function(accountname){
-            if(!accountname) {next();return;}
-            next(pm.add(name,{
+    var profile;
+    if(name){
+      profile = pm.profile(name);
+      if(profile) return next(profile);
+      if(pm.profiles().length){
+        console.log("Profile [",name,"] doesn't exist.");
+        program.confirm("create it now? ",function(ok){
+          if(ok){
+            console.log("Enter the otrtalk id for this profile. This is a public name that you give out to your buddies.");
+            program.prompt("otrtalk id: ",function(accountname){
+              if(!accountname) {next();return;}
+              next(pm.add(name,{
                 accountname:accountname,
                 otr:program.otr
-            }));
-          });
-        }else next();
-     });
+              }));
+            });
+          }else next();
+        });
+      }
     }else{
-     console.log("creating profile:",name);
-     console.log("Enter the otrtalk id for this profile. This is a public name that you give out to your buddies.");
-     program.prompt("otrtalk id: ",function(accountname){
-        if(!accountname) {next();return;}
-        next(pm.add(name,{
-            accountname:accountname,
-            otr:program.otr
-        }));
-     });
+        //no profile specified
+        if(pm.profiles().length == 1){
+            //use the single profile found
+            next( pm.profile( pm.profiles()[0]) );
+
+        }else if(pm.profiles().length > 1){            
+            //show a list selection of profiles to choose from.
+            var list = [];            
+            pm.profiles().forEach(function(prof){
+                list.push( prof );
+            });
+            console.log("Select a profile:");
+            program.choose(list, function(i){
+                next(pm.profile(list[i]));
+            });
+        }else{
+            //no profiles exist at all.. create a new one
+            console.log("No pofiles exist, let's create one now.");
+            program.prompt("profile name: ",function(name){
+                console.log("Enter an otrtalk id for this profile. This is a public name that you give out to your buddies.");
+                program.prompt("otrtalk id: ",function(accountname){
+                    if(!accountname) {next();return;}
+                    next(pm.add(name,{
+                        accountname:accountname,
+                        otr:program.otr
+                    }));
+                });
+            });
+        }
     }
 }
 
 function getBuddy(profile,buddy,mode,next){
+    var need_new_buddy = false;
     if(!buddy){
         if(mode=='connect'){
-          console.log("You didn't specify a buddy.");
-          next();
-          return;
-        }
-        if(profile.buddies.length){
-            console.log('select a buddy to chat with:');
+          console.log("You must specify a new buddy to connect with.");
+          need_new_buddy = true;
+        }else{
+          if(profile.buddies.length){
+            console.log('Select a buddy to chat with:');
             var list = [];            
             profile.buddies.forEach(function(bud){
                 list.push( bud.alias+":"+bud.id );
             });
             program.choose(list, function(i){
-                if(profile.buddies[i]){
-                    next( profile.buddies[i].alias );
-                }else next();
+                next( profile.buddies[i].alias );
             });
-        }else{
-            console.log("You didn't specify a buddy to chat with.");
-            next();
+          }else{
+            console.log("No buddy specified, and your buddy list is empty.");
+            need_new_buddy = true;
+          }
         }
     }else{
-     var buddyID = profile.buddyID(buddy);
-     if(buddyID){
-        next(buddy);
-     }else{
-        console.log("buddy not defined.");
-        if(mode == "connect"){
+        var buddyID = profile.buddyID(buddy);
+        if(buddyID){
+            next(buddy);
+            return;
+        }
+        console.log("Buddy not found.");
         program.confirm("add ["+buddy+"] to your buddy list now? ",function(ok){
             if(ok){
-              console.log("adding buddy [",buddy,"]");
-              program.prompt("enter "+buddy+"'s otrtalk id: ", function(id){
+                program.prompt("enter "+buddy+"'s otrtalk id: ", function(id){
+                  if(!id) {next();return;}
+                  profile.addBuddy(buddy,id);
+                  next(buddy);
+                });
+            }else next();
+        });
+    }
+
+    if(need_new_buddy) {
+        program.prompt("Buddy name: ",function(buddy){
+            program.prompt(buddy+"'s otrtalk id: ", function(id){
                 if(!id) {next();return;}
                 profile.addBuddy(buddy,id);
                 next(buddy);
-              });
-            } else next();
+            });
         });
-        }else{
-            console.log("The first time you want to chat with a new buddy, you must use the connect command");
-            next();
-        }
-     }
     }
 }
+
 function accessKeyStore(profile,buddy,VFS,create,next){
   if(VFS){
     //when using otr3-em and otr4-em otr modules we encrypt the files on the real file system
@@ -332,7 +359,7 @@ function openKeyStore(profile,buddy,vfs,password,next){
 
 function ensureAccount(user,accountname,protocol,next){
     if(!user.fingerprint( accountname, protocol)){
-       console.log("A public key needs to be generated for the profile.");
+       console.log("A DSA key needs to be generated for the profile.");
        program.confirm("Generate one now? ",function(ok){
           if(ok){
             user.generateKey(accountname,protocol,function(err){
@@ -488,7 +515,7 @@ function profile_manage(action, profilename, accountname){
                     if(profile) {
                         console.log("Created Profile:",profilename);
                         profile.print();
-                    }else console.log("Problem creating profile!");
+                    }else console.log("Failed to create profile.");
 
                 }else console.log(profilename,"profile already exists!");
                 break;
@@ -496,7 +523,7 @@ function profile_manage(action, profilename, accountname){
                 if(!profilename) {console.log("profilename not specified");return;}
                 profile = pm.profile(profilename);
                 if(profile){
-                   program.confirm("are you sure you want to remove profile: "+profilename+"? ",function(ok){
+                   program.confirm("** Are you sure you want to remove profile: "+profilename+"? (Ctrl-C to cancel)** ",function(ok){
                        if(ok){
                          pm.remove(profilename);
                          process.exit();
