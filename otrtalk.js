@@ -278,9 +278,7 @@ function getBuddy(profile,buddy,mode,next){
             console.log('Select a buddy to',mode,'with:');
             var list = [];            
             profile.buddies.forEach(function(bud){
-                if((bud.fingerprint && mode=='chat') || (!bud.fingerprint && mode=='connect')){
-                     list.push( bud.alias+":"+bud.id );
-                }
+                list.push( bud.alias+":"+bud.id );
             });
             program.choose(list, function(i){
                 next( profile.buddies[i].alias );
