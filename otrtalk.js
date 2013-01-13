@@ -106,11 +106,6 @@ function otrtalk(use_profile,buddy,talk_mode){
                 console.log("Buddy has same otrtalk id as you!");
                 process.exit();
             }
-            if(talk_mode == 'chat' && !Talk.profile.buddyFP(buddy)){
-                //switch to connect mode.
-                console.log("You haven't yet established a trust with this buddy.\nSwitching to 'connect' mode.");
-                Talk.MODE = talk_mode = 'connect';
-            }
             console.log("[ok]");
             process.stdout.write("\notr module check: ");
             if(!OTR_INSTANCE(Talk.profile.otr)){
@@ -137,15 +132,27 @@ function otrtalk(use_profile,buddy,talk_mode){
                             process.exit();
                         }
                         if(result=='new') Talk.files.save();//save newly created instance tag
-                         //todo if buddy we are connecting to already has a trusted fingerprint, switch to chat mode
-                        //unless we --force-connect to allow a new fingerprint to be discovered..(in such case will
-                        //a new fingerprint overwrite the old one when saved to file?
-                        //clear userstate.. (new one will be created for each incoming connection)
                         console.log("Using DSA Key fingerprint:",Talk.user.fingerprint(Talk.accountname,Talk.protocol));
+
+                        //clear userstate.. (new one will be created for each incoming connection)
                         Talk.user.state.free();
                         delete Talk.user.state;
                         delete Talk.user;
                         console.log("[ok]");
+
+                        //if the fingerprints file exists.. we have already trusted buddy fingerprint
+                        if( fs.existsSync(Talk.files.fingerprints) ){
+                            if(talk_mode=='connect'){
+                                console.log("You already have a trust with this buddy.\nSwitching to 'chat' mode.");
+                                Talk.MODE = talk_mode = 'chat';
+                            }
+                        }else{
+                            if(talk_mode=='chat'){
+                                console.log("You haven't yet established a trust with this buddy.\nSwitching to 'connect' mode.");
+                                Talk.MODE = talk_mode = 'connect';
+                            }
+                        }
+
                         Network = require("./lib/network");
                         //esnure fingerprint if entered as option is correctly formatted
                         ensureFingerprint(program.fingerprint,function(valid_fingerprint){
@@ -443,7 +450,6 @@ function incomingConnection(talk,peer,response){
                     this_session.end();
                 }else{
                     this_session.writeAuthenticatedFingerprints();
-                    talk.profile.updateBuddyFingerprint( talk.buddy, fingerprint );
                     startChat(talk,this_session,fingerprint);
                 }
             });
