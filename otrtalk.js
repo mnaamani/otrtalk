@@ -59,11 +59,11 @@ function main(){
      });
 
   program
-    .command('import-key [application] [accountname] [protocol] [profile] [otrtalk-id]')
+    .command('import-key [pidgin|adium] [profile] [otrtalk-id]')
     .description('import a key from pidgin/adium into new profile')
-    .action( function(app,accountname,protocol,profile,id){
+    .action( function(app,profile,id){
         got_command = true;
-        import_key_wizard(app,accountname,protocol,profile,id);
+        import_key_wizard(app,profile,id);
     });
 
   program.parse(process.argv);
@@ -550,13 +550,9 @@ function shutdown(){
     },300);
 }
 
-function import_key_wizard(app,accountname,protocol,profilename,id){
+function import_key_wizard(app,profile,id){
     var filename;
-    profilename = profilename || program.profile;
-    if(!profilename) {
-          console.log("target profile name for import not specified!\n");
-          return;
-    }   
+    profile = profile || program.profile;
     if(!app){
       console.log("You did not specify an application.")
       console.log("specify either: pidgin or adium");
@@ -564,9 +560,13 @@ function import_key_wizard(app,accountname,protocol,profilename,id){
     }
     if(IMAPPS[app]){
       if(IMAPPS[app][process.platform]){
+          if(!profile) {
+            console.log("target profile name for import not specified!\n");
+            return;
+          }
           filename = resolve_home_path(IMAPPS[app][process.platform].keys);
           if(fs.existsSync(filename)){
-            do_import_key(filename,accountname,protocol,profilename,id);
+            do_import_key(filename,profile,id);
           }else{
             console.log("keystore file not found:",filename);
           }          
@@ -578,7 +578,7 @@ function import_key_wizard(app,accountname,protocol,profilename,id){
     }
 }
 
-function do_import_key(filename,accountname,protocol,profilename,id){
+function do_import_key(filename,profilename,id){
     var UserFiles = require("./lib/files").UserFiles;
     var pm = require("./lib/profiles");
     
@@ -586,9 +586,10 @@ function do_import_key(filename,accountname,protocol,profilename,id){
     var target = {};
     var source = {};
     var key;
-
-    var profile = pm.profile(profilename);//check if profile already exists - don't overwrite!
-    if(profile){
+    var profile;
+    
+    //check if profile already exists - don't overwrite!
+    if(pm.profile(profilename)){
       console.log("Profile '"+profilename+"' already exists. Please specify a different profile to import into.");
       return;
     }
@@ -597,49 +598,53 @@ function do_import_key(filename,accountname,protocol,profilename,id){
     console.log("checking application files..");
     source.files = new UserFiles({keys:filename,fingerprints:"/tmp/tmp.fp",instags:'/tmp/tmp.tag'},null,VFS);
     source.user = new otr.User(source.files);
-    
-    if(!accountname || !protocol){
-        console.log("Please specify an accountname and protocol. Availbale accounts to import:");
-        source.user.accounts().forEach(function(account){
-          console.log("accountname:",account.accountname,"protocol:",account.protocol,"fingerprint:",account.fingerprint);
-        });
-    }else{
-        key = source.user.findKey(accountname,protocol);
-        if(key){
-            console.log("creating new profile",profilename);
-            profile = pm.add(profilename,{id:id,accountname:accountname,protocol:protocol,otr:"otr4-em"},false,true);
-            if(!profile){
-              console.log("error adding new new profile!");
-              return;
-            }
-            accessKeyStore(profile,null,VFS,true,function(user_files){
-                target.files = user_files;
-                if(target.files){
-                  try{
-                  //make sure import and export files are different paths
-                  if(target.files.keys == source.files.keys || target.files.fingerprints == source.files.fingerprints){
-                    console.log("keystore file conflict!");
-                    return;
-                  }
-                  target.user = new otr.User(target.files);
-                  target.user.importKey(accountname,protocol,key.export());
-                  target.files.save();
-                  pm.save(profilename);
-                  console.log("Imported Keys Successfully to profile:",profilename);
-                  profile.print();
-                  return;//success
-                }catch(E){
-                  pm.remove(profilename);
-                  console.log("Key Import Failed!",E);
-                }
-              }else{
-                console.log("error creating new keystore files.");
-              }
-            });
-        }else{
-          console.log("Account not found:",accountname,protocol);      
+
+    console.log("Select an account to import:");
+    var list = [];
+    var accounts = source.user.accounts();
+    accounts.forEach(function(account){
+       list.push(account.protocol+":"+account.accountname);
+    });
+    program.choose(list,function(i){
+        profile = pm.add(profilename,{id:id,accountname:accounts[i].accountname,protocol:accounts[i].protocol,otr:"otr4-em"},false,true);
+        if(!profile){
+            console.log("Error adding new profile.");
+            return;
         }
-    }
+        key = source.user.findKey(accounts[i].accountname,accounts[i].protocol);
+        accessKeyStore(profile,null,VFS,true,function(user_files){
+            target.files = user_files;
+            if(target.files){
+              try{
+                //make sure import and export files are different paths
+                if(target.files.keys == source.files.keys || target.files.fingerprints == source.files.fingerprints){
+                  console.log("keystore file conflict!");
+                  return;
+                }
+                target.user = new otr.User(target.files);
+                target.user.importKey(accounts[i].accountname,accounts[i].protocol,key.export());
+                target.files.save();
+                pm.save(profilename);
+                profile.print();
+                console.log(" == Keystore");
+                var Table = require("cli-table");
+                var table = new Table({
+                    head:['accountname','protocol','fingerprint']
+                });
+                target.user.accounts().forEach(function(account){
+                   table.push([account.accountname,account.protocol,account.fingerprint]);
+                });
+                console.log(table.toString());
+                console.log("Imported key successfully to profile:",profilename);
+                return;//success
+              }catch(E){
+                console.log("Key Import Failed!",E);
+              }
+            }else{
+              console.log("error creating new keystore files.");
+            }
+        });
+    });
 }
 
 function imapp_fingerprints_parse(){
