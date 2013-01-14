@@ -525,10 +525,36 @@ function profile_manage(action, profilename, arg1, arg2){
                     profile = pm.add(profilename,{
                      accountname:accountname,
                      otr:program.otr
-                    });
+                    },false,true);
                     if(profile) {
-                        console.log("Created Profile:",profilename);
-                        profile.print();
+                        otr = OTR_INSTANCE();
+                        accessKeyStore(profile,undefined,(otr.VFS?otr.VFS():undefined),true,function(files){
+                            if(files){
+                              var user = new otr.User( files );
+                              ensureAccount(user,profile.accountname,profile.protocol,function(result,err){
+                                if(err) {
+                                    console.log("Error generating key.",err.message);
+                                    process.exit();
+                                }
+                                if(result=='new'){
+                                    files.save();
+                                    pm.save(profile.name);
+                                    profile.print();
+                                    console.log(" == Generated Key");
+                                    var Table = require("cli-table");
+                                    var table = new Table({
+                                        head:['accountname','protocol','fingerprint']
+                                    });
+                                    user.accounts().forEach(function(account){
+                                        table.push([account.accountname,account.protocol,account.fingerprint]);
+                                    });
+                                    console.log(table.toString());
+                                    process.exit();
+                                }
+                              });
+                            }else process.exit();
+                        });
+
                     }else console.log("Failed to create profile.");
 
                 }else console.log(profilename,"Profile already exists!");
