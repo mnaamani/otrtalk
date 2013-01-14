@@ -26,17 +26,35 @@ otrtalk doesn't depend on servers or datacenters. However some nodes/servers act
 
     npm -g install otrtalk
     
-### Quick Setup
+### Getting started
 
-Jump right in and connect to a new buddy 'new_buddy'.
-Otrtalk will guide you to setup a new identity, and contact new_buddy if they are online.
+Setup your OTR public key. You can choose to import an existing DSA key from pidgin or adium accounts, or generate a new one.
+To generate a new key, create a new profile *Profile_Name* and assign it an otrtalk-id *me@otr-talk*:
 
-    otrtalk connect new_buddy
+    otrtalk profiles add Profile_Name me@otr-talk
+
+To import a key from pidgin, into a new profile:
+
+    otrtalk import-key pidgin Profile_Name me@otr-talk
+
+To connect to a buddy you should know their otrtalk-id and public key fingerprint:
+
+    otrtalk connect buddy_alias -fingerprint "517720E5 BE9A020E 0F8F551A A5D0C18D 09F19E09"
+
+You will be prompted to add buddy_alias to your profile buddylist and enter their corresponding otrtalk-id.
+You will also be prompted for an SMP authentication secret which you and your buddy must agree to for the new trust connection to be established.
+
+Your buddy should follow the same procedure. When you are both online a p2p connection will be established, followed by a prompt to accept each other's
+fingerprints and a secure chat begins.
+
+In future you only need to use the chat command to chat with your buddy:
+
+    otrtalk chat buddy_alias
+
 
 ### Otrtalk Profiles
 
 Multiple profiles/identities can be managed and are referred to by a simple profile-name.
-A default profile named *default* will be used when a profile is not specified.
 
 An otrtalk profile stores
 
@@ -71,21 +89,30 @@ To see a list of profiles on the system...
 
 To get details on a profile..
 
-    otrtalk profiles info default
+    otrtalk profiles info [profile]
 
 ### Otrtalk Modes
 
 *Otrtalk has two modes of operation Connect and Chat mode*
 
-**Connect Mode**
+**Connect Mode** - for establishing new trust
+
+To be able to add a buddy to your buddy list and have chats you must use connect mode to establish trust.
+Prior to starting a connect session, exchange your otrtalk-id and public key fingerprint with your buddy securely (in person,or using another authenticated channel [text secure/secure email]). You must also agree on a shared secret.
+This is a one-time secret which will be used to to perform a automated Socialist Millionair's Protocol (SMP) authentication
+as part of the network discovery protocol to find our buddy in the p2p network.
+
+Most reliable - specify a known buddy's fingerprint (from existing instant messaging app pidgin or adium)
+
+    otrtalk connect bob -fingerprint "517720E5 BE9A020E 0F8F551A A5D0C18D 09F19E09" --pidgin
+
+For connecting to a new buddy not in our pidgin or adium buddy lists:
+
+    otrtalk connect bob -fingerprint "517720E5 BE9A020E 0F8F551A A5D0C18D 09F19E09"
+
+Works but not recommended, would have to do SMP authentication with every connection and manually verify each fingerprint:
 
     otrtalk connect bob
-    
-Otrtalk employs trust on first use *(TOFU)* authentication to establish a trust/connection with a new buddy. 
-Prior to starting a connect session, exchange your otrtalk id and public key fingerprint with your buddy. Securely,
-(in person,or using another trusted authenticated channel [text secure]). You must also agree on a shared secret.
-This is a onetime secret which will be used to to perform a automated Socialist Millionair's Protocol (SMP) authentication
-as part of the network discovery protocol to find our buddy in the p2p network.
 
 Once a session successfully completes SMP authentication, the fingerprint of the public
 key is presented. At this point we **must** verify that it matches the one we exchanged securely with our buddy.
@@ -94,8 +121,7 @@ After successfull verification the fingerprint is saved and a secure chat sessio
 
 **Chat Mode**
 
-Use chat mode to connect to a buddy with which a trust has already been established.(Either by having completed a connect session,
-or if we have manually imported thier fingerprint to the fingerprints store)
+Use chat mode to connect to a buddy with which a trust has already been established.
 
     otrtalk chat bob
 
