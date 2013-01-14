@@ -59,6 +59,14 @@ function main(){
      });
 
   program
+    .command('forget [buddy] [profile]')
+    .description('remove buddy from profile')
+    .action( function(buddy,profile){
+        got_command = true;
+        profile_manage.apply(this,['forget-buddy',profile||program.profile,buddy]);
+     });
+
+  program
     .command('import-key [pidgin|adium] [profile] [otrtalk-id]')
     .description('import a key from pidgin/adium into new profile')
     .action( function(app,profile,id){
@@ -226,7 +234,7 @@ function getProfile( pm, name, next ){
       profile = pm.profile(name);
       if(profile) return next(profile);
       console.log("Profile [",name,"] doesn't exist.");
-      program.confirm("create it now? ",function(ok){
+      program.confirm("create it now [y/n]? ",function(ok){
         if(ok){
           console.log("Enter the otrtalk id for this profile. This is a public name that you give out to your buddies.");
           program.prompt("otrtalk id: ",function(accountname){
@@ -294,7 +302,7 @@ function getBuddy(profile,buddy,mode,next){
             return;
         }
         console.log("Buddy not found.");
-        program.confirm("add ["+buddy+"] to your buddy list now? ",function(ok){
+        program.confirm("add ["+buddy+"] to your buddy list now [y/n]? ",function(ok){
             if(ok){
                 program.prompt("enter "+buddy+"'s otrtalk id: ", function(id){
                   if(!id) {next();return;}
@@ -361,7 +369,7 @@ function openKeyStore(profile,buddy,vfs,password,next){
 function ensureAccount(user,accountname,protocol,next){
     if(!user.fingerprint( accountname, protocol)){
        console.log("A DSA key needs to be generated for the profile.");
-       program.confirm("Generate one now? ",function(ok){
+       program.confirm("Generate one now [y/n]? ",function(ok){
           if(ok){
             user.generateKey(accountname,protocol,function(err){
               if(err){
@@ -442,7 +450,7 @@ function incomingConnection(talk,peer,response){
             console.log("\t"+fingerprint);
             console.log("\nVerify that it matches the fingerprint of");
             console.log("the person you are intending to connect with.");
-            program.confirm("Do you want to trust this fingerprint? ",function(ok){
+            program.confirm("Do you want to trust this fingerprint [y/n]? ",function(ok){
                 if(!ok){
                     console.log("[rejecting connection]");
                     this_session.end();
@@ -470,10 +478,11 @@ function startChat(talk,session,fingerprint){
    Chat.attach(talk,session);
 }
 ////// Profiles Command
-function profile_manage(action, profilename, accountname){
+function profile_manage(action, profilename, arg1, arg2){
     var pm = require("./lib/profiles");  
     var profile;
     profilename = profilename || program.profile;
+    var accountname, buddy;
     if(!action){
            pm.list();
     }else{
@@ -482,9 +491,13 @@ function profile_manage(action, profilename, accountname){
                  pm.list();
                  break;
             case 'info':
-                if(!profilename) {console.log("profilename not specified");return;}
+                if(!pm.profiles() || !pm.profiles().length) return console.log("No profiles found.");
+                if(!profilename){
+                    if(pm.profiles().length>1) {console.log("Profile not specified.");return;}
+                    profilename = pm.profiles()[0];
+                }
                 profile = pm.profile(profilename);
-                if(!profile) {console.log('profile "'+profilename+'" not found.');break;}
+                if(!profile) {console.log('Profile "'+profilename+'" not found.');break;}
                 profile.print();
                 otr = OTR_INSTANCE();
                 accessKeyStore(profile,undefined,(otr.VFS?otr.VFS():undefined),false,function(files){
@@ -503,10 +516,11 @@ function profile_manage(action, profilename, accountname){
                 });
                 break;
             case 'add':
-                if(!profilename) {console.log("profilename not specified");return;}
+                if(!profilename) {console.log("Profile not specified.");return;}
                 profile = pm.profile(profilename);
+                accountname = arg1;
                 if(!profile){
-                    if(!accountname){ console.log("no otrtalk id specified"); break;}
+                    if(!accountname){ console.log("No otrtalk id specified"); break;}
                     //create profile with default settings..
                     profile = pm.add(profilename,{
                      accountname:accountname,
@@ -517,21 +531,47 @@ function profile_manage(action, profilename, accountname){
                         profile.print();
                     }else console.log("Failed to create profile.");
 
-                }else console.log(profilename,"profile already exists!");
+                }else console.log(profilename,"Profile already exists!");
                 break;
             case 'remove':
-                if(!profilename) {console.log("profilename not specified");return;}
+                if(!pm.profiles() || !pm.profiles().length) return console.log("No profiles found.");
+                if(!profilename){
+                    if(pm.profiles().length>1) {console.log("Profile not specified.");return;}
+                    profilename = pm.profiles()[0];
+                }
                 profile = pm.profile(profilename);
                 if(profile){
-                   program.confirm("** Are you sure you want to remove profile: "+profilename+"? (Ctrl-C to cancel)** ",function(ok){
+                   program.confirm("**Are you sure you want to remove profile: "+profilename+" [y/n]? ",function(ok){
                        if(ok){
                          pm.remove(profilename);
                          process.exit();
                        }else process.exit();
                    });
                 }else{
-                    console.log("profile does not exist");
+                    console.log("Profile does not exist");
                 }
+                break;
+            case 'forget-buddy':
+                buddy = arg1;
+                if(!buddy){ console.log("Buddy not specified.");return;}
+                if(!pm.profiles() || !pm.profiles().length) return console.log("No profiles found.");
+                if(!profilename){
+                    if(pm.profiles().length>1) {console.log("Profile not specified.");return;}
+                    profilename = pm.profiles()[0];
+                }
+                profile = pm.profile(profilename);
+                if(!profile) {console.log('Profile "'+profilename+'" not found.');break;}
+                if(profile.buddyID(buddy)){
+                   program.confirm("Are you sure you want to remove "+buddy+" [y/n]? ",function(ok){
+                       if(!ok) process.exit();
+                       if(fs.existsSync(profile.buddyFingerprints(buddy))){
+                           fs.unlink(profile.buddyFingerprints(buddy));
+                       }
+                       profile.removeBuddy(buddy);
+                       console.log("deleted buddy:",buddy);
+                       process.exit();
+                   });
+                }else console.log("Buddy not found.");
                 break;
         }
     }
