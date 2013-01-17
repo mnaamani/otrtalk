@@ -418,7 +418,6 @@ function incomingConnection(talk,peer,response){
           return;
     }
 
-    //todo check sessions.. dont accept connection from same peer.. (ip/port)
     var session = new SessionManager.TalkSession({
             mode:function(){ return talk.MODE },
             accountname : talk.accountname,
@@ -499,7 +498,7 @@ function profile_manage(action, profilename, arg1, arg2){
                 profile = pm.profile(profilename);
                 if(!profile) {console.log('Profile "'+profilename+'" not found.');break;}
                 profile.print();
-                otr = OTR_INSTANCE();
+                otr = OTR_INSTANCE(profile.otr);
                 accessKeyStore(profile,undefined,(otr.VFS?otr.VFS():undefined),false,function(files){
                     if(files){
                         console.log(" == Keystore");
@@ -527,7 +526,7 @@ function profile_manage(action, profilename, arg1, arg2){
                      otr:program.otr
                     },false,true);
                     if(profile) {
-                        otr = OTR_INSTANCE();
+                        otr = OTR_INSTANCE(program.otr);
                         accessKeyStore(profile,undefined,(otr.VFS?otr.VFS():undefined),true,function(files){
                             if(files){
                               var user = new otr.User( files );
