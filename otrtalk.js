@@ -472,7 +472,7 @@ function incomingConnection(talk,peer,response){
 }
 function startChat(talk,session,fingerprint){
   //todo: close all other sessions.
-  //talk.link.stop(); stop telehash connector.
+   talk.link.pause();
    talk.MODE = 'chat';
    console.log('[entering secure chat]\nbuddy fingerprint:',fingerprint);
    Chat.attach(talk,session);
