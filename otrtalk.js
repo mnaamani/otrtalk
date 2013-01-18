@@ -431,13 +431,13 @@ function incomingConnection(talk,peer,response){
         }, otr, peer,response);
 
     //when a session is authenticated - will happen only once!
-    session.on("auth",function( fingerprint, state){   
+    session.on("auth",function(state){
        var this_session = this;
        console.log("[verifying connection]");
        switch( talk.MODE ){
          case 'chat':
                assert(state.Trusted && !state.NewFingerprint);
-               startChat(talk,this_session,fingerprint);
+               this_session.go_chat();
                break;
 
          case 'connect':
@@ -446,7 +446,7 @@ function incomingConnection(talk,peer,response){
             console.log("You have connected to someone who claims to be",talk.buddyID);
             console.log("They know the authentication secret.");
             console.log("Their public key fingerprint:\n");
-            console.log("\t"+fingerprint);
+            console.log("\t"+this_session.fingerprint());
             console.log("\nVerify that it matches the fingerprint of");
             console.log("the person you are intending to connect with.");
             program.confirm("Do you want to trust this fingerprint [y/n]? ",function(ok){
@@ -454,13 +454,12 @@ function incomingConnection(talk,peer,response){
                     console.log("[rejecting connection]");
                     this_session.end();
                 }else{
-                    this_session.writeAuthenticatedFingerprints();
-                    startChat(talk,this_session,fingerprint);
+                    this_session.go_chat();
                 }
             });
            }else if(state.Trusted){
             //we used connect mode and found an already trusted fingerprint...
-            startChat(talk,this_session,fingerprint);
+            this_session.go_chat();
            }
        }
     });
@@ -468,12 +467,17 @@ function incomingConnection(talk,peer,response){
     session.on("closed",function(){
         if(Chat.ActiveSession() == this) shutdown();
     });
+
+    session.on("start_chat",function(){
+        this.writeAuthenticatedFingerprints();
+        startChat(talk,this);
+    });
 }
-function startChat(talk,session,fingerprint){
+function startChat(talk,session){
   //todo: close all other sessions.
    talk.link.pause();
    talk.MODE = 'chat';
-   console.log('[entering secure chat]\nbuddy fingerprint:',fingerprint);
+   console.log('[entering secure chat]\nbuddy fingerprint:',session.fingerprint());
    Chat.attach(talk,session);
 }
 ////// Profiles Command
