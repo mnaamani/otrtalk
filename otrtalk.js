@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+var async = require("async");
 var program = require("commander");
 var fs = require("fs");
 var path = require("path");
@@ -405,19 +405,17 @@ function startTalking(talk){
     console.log("\nStarting Network.");
     Network.init(function(){
         console.log("\nContacting", talk.buddy,"...");
-        talk.link.connect(function( peer,response ){
-            incomingConnection(talk,peer,response);
+        talk.link.connect(function( peer ){
+            if(Chat.ActiveSession() || talk.found_buddy ){
+              peer.close();
+              return;
+            }
+            incomingConnection(talk,peer);
         });
     });
 }
 
-function incomingConnection(talk,peer,response){
-
-    if(Chat.ActiveSession()){
-          peer.close();
-          return;
-    }
-
+function incomingConnection(talk,peer){
     var session = new SessionManager.TalkSession({
             mode:function(){ return talk.MODE },
             accountname : talk.accountname,
@@ -428,55 +426,72 @@ function incomingConnection(talk,peer,response){
             secret : talk.secret,
             buddyFP : talk.fingerprint,
             trustedFP: talk.trusted_fingerprints
-        }, otr, peer,response);
+        }, otr, peer);
 
-    //when a session is authenticated - will happen only once!
     session.on("auth",function(trust){
-       var this_session = this;
-       console.log("[verifying connection]");
-       switch( talk.MODE ){
-         case 'chat':
-               assert(trust.Trusted && !trust.NewFingerprint);
-               this_session.go_chat();
-               break;
-
-         case 'connect':
-            if(trust.NewFingerprint){
-            //howto handle multiple sessions reaching here?
-            console.log("You have connected to someone who claims to be",talk.buddyID);
-            console.log("They know the authentication secret.");
-            console.log("Their public key fingerprint:\n");
-            console.log("\t"+this_session.fingerprint());
-            console.log("\nVerify that it matches the fingerprint of");
-            console.log("the person you are intending to connect with.");
-            program.confirm("Do you want to trust this fingerprint [y/n]? ",function(ok){
-                if(!ok){
-                    console.log("[rejecting connection]");
-                    this_session.end();
-                }else{
-                    this_session.go_chat();
-                }
-            });
-           }else if(trust.Trusted){
-            //we used connect mode and found an already trusted fingerprint...
-            this_session.go_chat();
-           }
-       }
+       if(!talk.auth_queue) talk.auth_queue = async.queue(handleAuth,1);
+       talk.auth_queue.push({session:session,talk:talk,peer:peer,trust:trust});
     });
 
     session.on("closed",function(){
         if(Chat.ActiveSession() == this) shutdown();
+        if(this._on_auth_complete) this._on_auth_complete();
     });
 
     session.on("start_chat",function(){
         if(talk.MODE=='connect') this.writeAuthenticatedFingerprints();
         startChat(talk,this);
     });
+
+    session.start();
+}
+function handleAuth(_,callback){
+    var session = _.session,
+        talk = _.talk,
+        trust = _.trust,
+        peer = _.peer;
+
+    if(talk.found_buddy){
+        session.end();
+        callback();
+        return;
+    }
+
+    console.log("[verifying connection]");
+    session._on_auth_complete = callback;
+    switch( talk.MODE ){
+        case 'chat':
+            assert(trust.Trusted && !trust.NewFingerprint);
+            session.go_chat();
+            break;
+
+        case 'connect':
+           if(trust.NewFingerprint){
+            console.log("You have connected to someone who claims to be",talk.buddyID);
+            console.log("They know the authentication secret.");
+            console.log("Their public key fingerprint:\n");
+            console.log("\t"+session.fingerprint());
+            program.confirm("\nDo you want to trust this fingerprint [y/n]? ",function(ok){
+                if(!ok){
+                    console.log("[rejecting connection]");
+                    session.end();
+                }else{
+                    session.go_chat();
+                }
+            });
+          }else if(trust.Trusted){
+            //we used connect mode and found an already trusted fingerprint...
+            session.go_chat();
+          }
+          break;
+     }
 }
 function startChat(talk,session){
-  //todo: close all other sessions.
    talk.link.pause();
    talk.MODE = 'chat';
+   talk.found_buddy = true;
+   if(session._on_auth_complete) session._on_auth_complete();
+   delete session._on_auth_complete;
    console.log('[entering secure chat]\nbuddy fingerprint:',session.fingerprint());
    Chat.attach(talk,session);
 }
