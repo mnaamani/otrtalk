@@ -431,17 +431,17 @@ function incomingConnection(talk,peer,response){
         }, otr, peer,response);
 
     //when a session is authenticated - will happen only once!
-    session.on("auth",function(state){
+    session.on("auth",function(trust){
        var this_session = this;
        console.log("[verifying connection]");
        switch( talk.MODE ){
          case 'chat':
-               assert(state.Trusted && !state.NewFingerprint);
+               assert(trust.Trusted && !trust.NewFingerprint);
                this_session.go_chat();
                break;
 
          case 'connect':
-            if(state.NewFingerprint){
+            if(trust.NewFingerprint){
             //howto handle multiple sessions reaching here?
             console.log("You have connected to someone who claims to be",talk.buddyID);
             console.log("They know the authentication secret.");
@@ -457,7 +457,7 @@ function incomingConnection(talk,peer,response){
                     this_session.go_chat();
                 }
             });
-           }else if(state.Trusted){
+           }else if(trust.Trusted){
             //we used connect mode and found an already trusted fingerprint...
             this_session.go_chat();
            }
@@ -469,7 +469,7 @@ function incomingConnection(talk,peer,response){
     });
 
     session.on("start_chat",function(){
-        this.writeAuthenticatedFingerprints();
+        if(talk.MODE=='connect') this.writeAuthenticatedFingerprints();
         startChat(talk,this);
     });
 }
