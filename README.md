@@ -15,12 +15,14 @@
 
 otrtalk currently only supports synchronous two-party messaging, (both parties must be online at the same time to exchange messages).
 
+*some ideas which could be implemented - buddy can offer 'services' such as socks-proxy,http-proxy, port forwarding etc.. to connected buddy (ala ssh)
+
 ### Privacy & Security
-* otrtalk does *NOT* anonymise your connection with the remote party in any way.
+* otrtalk does *NOT* anonymise your connection with the remote party in any way. (It might be possible however to access the p2p network via a TURN server by TLS over TOR?) (todo)  
 * otrtalk uses the OTR protocol to offer encryption/authentication and forward secrecy.
 
 ### Decentralised
-otrtalk doesn't depend on servers or datacenters. However some nodes/servers acting as udp proxies would be necessary in the cases where NAT's cannot be traversed successfully. (todo)
+otrtalk doesn't depend on servers or datacenters. The p2p network at the moment only consists of two seed nodes. Alot of work will need to go into growing the network size for it to be dependable. TURN servers will need to be used when NAT's cannot be successfully traversed. (todo)
 
 ### Installing
 
@@ -39,7 +41,7 @@ To import a key from pidgin, into a new profile:
 
 To connect to a buddy you should know their otrtalk-id and public key fingerprint:
 
-    otrtalk connect buddy_alias -fingerprint "517720E5 BE9A020E 0F8F551A A5D0C18D 09F19E09"
+    otrtalk connect buddy_alias --fingerprint "517720E5 BE9A020E 0F8F551A A5D0C18D 09F19E09"
 
 You will be prompted to add buddy_alias to your profile buddylist and enter their corresponding otrtalk-id.
 You will also be prompted for an SMP authentication secret which you and your buddy must agree to for the new trust connection to be established.
@@ -104,11 +106,11 @@ as part of the network discovery protocol to find our buddy in the p2p network.
 
 Most reliable - specify a known buddy's fingerprint (from existing instant messaging app pidgin or adium)
 
-    otrtalk connect bob -fingerprint "517720E5 BE9A020E 0F8F551A A5D0C18D 09F19E09" --pidgin
+    otrtalk connect bob --fingerprint "517720E5 BE9A020E 0F8F551A A5D0C18D 09F19E09" --pidgin
 
 For connecting to a new buddy not in our pidgin or adium buddy lists:
 
-    otrtalk connect bob -fingerprint "517720E5 BE9A020E 0F8F551A A5D0C18D 09F19E09"
+    otrtalk connect bob --fingerprint "517720E5 BE9A020E 0F8F551A A5D0C18D 09F19E09"
 
 Works but not recommended, would have to do SMP authentication with every connection and manually verify each fingerprint:
 
