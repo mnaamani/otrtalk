@@ -26,7 +26,7 @@ function main(){
   var got_command = false;
   init_stdin_stderr();
   program
-    .version("0.1.3")
+    .version("0.1.5")
     .option("-p, --profile [profile]","specify profile to use","")
     .option("-f, --fingerprint [fingerprint]","public key fingerprint of buddy to connect with [connect mode]","")
     .option("-s, --secret [secret]","secret to use for SMP authentication [connect mode]","")
