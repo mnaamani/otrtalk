@@ -7,6 +7,7 @@ var assert = require("assert");
 var Network;
 var SessionManager = require("./lib/sessions");
 var Chat = require("./lib/chat");
+var fs_existsSync = fs.existsSync || path.existsSync;
 
 var otr;
 var otr_modules = {
@@ -149,7 +150,7 @@ function otrtalk(use_profile,buddy,talk_mode){
                         console.log("[ok]");
 
                         //if the fingerprints file exists.. we have already trusted buddy fingerprint
-                        if( fs.existsSync(Talk.files.fingerprints) ){
+                        if( fs_existsSync(Talk.files.fingerprints) ){
                             if(talk_mode=='connect'){
                                 console.log("You already have a trust with this buddy.\nSwitching to 'chat' mode.");
                                 Talk.MODE = talk_mode = 'chat';
@@ -330,7 +331,7 @@ function accessKeyStore(profile,buddy,VFS,create,next){
     //when using otr3-em and otr4-em otr modules we encrypt the files on the real file system
     //the AES 256bit encryption key and IV are derived from a password
 
-    if(fs.existsSync(profile.keys)){
+    if(fs_existsSync(profile.keys)){
         //assume already encrypted from previous session.
         //ask once for password.
          program.password('enter key-store password: ', '', function(password){
@@ -608,7 +609,7 @@ function profile_manage(action, profilename, arg1, arg2){
                 if(profile.buddyID(buddy)){
                    program.confirm("Are you sure you want to remove "+buddy+" [y/n]? ",function(ok){
                        if(!ok) process.exit();
-                       if(fs.existsSync(profile.buddyFingerprints(buddy))){
+                       if(fs_existsSync(profile.buddyFingerprints(buddy))){
                            fs.unlink(profile.buddyFingerprints(buddy));
                        }
                        profile.removeBuddy(buddy);
@@ -647,7 +648,7 @@ function import_key_wizard(app,profile,id){
             return;
           }
           filename = resolve_home_path(IMAPPS[app][process.platform].keys);
-          if(fs.existsSync(filename)){
+          if(fs_existsSync(filename)){
             do_import_key(filename,profile,id);
           }else{
             console.log("keystore file not found:",filename);
@@ -741,7 +742,7 @@ function imapp_fingerprints_parse(){
     if(IMAPPS[app]){
       if(IMAPPS[app][process.platform]){
           filename = resolve_home_path(IMAPPS[app][process.platform].fingerprints);
-          if(fs.existsSync(filename)){
+          if(fs_existsSync(filename)){
             //buddy-username    accountname     protocol    fingerprint     smp
             var buddies = fs.readFileSync(filename,"utf-8").split('\n');
             if(buddies && buddies.length){
