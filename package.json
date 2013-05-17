@@ -1,6 +1,6 @@
 {
     "name":     "otrtalk",
-    "version":  "0.1.9",
+    "version":  "0.1.10",
     "main": "otrtalk.js",
     "bin" : { 
         "otrtalk" : "./otrtalk.js"
@@ -20,7 +20,7 @@
     "dependencies":{
         "async":"*",
         "commander":">=1.1.1",
-        "get-telehash":">=0.0.9",
+        "get-telehash":">=0.0.11",
         "otr4-em":">=0.0.11",
         "ansi":">=0.1.2",
         "keypress":">=0.1.0",
