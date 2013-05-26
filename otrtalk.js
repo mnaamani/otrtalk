@@ -408,7 +408,7 @@ function startTalking(talk){
         console.log("\nContacting", talk.buddy,"...");
         talk.link.connect(function( peer ){
             if(Chat.ActiveSession() || talk.found_buddy ){
-              peer.close();
+              peer.disconnectLater();
               return;
             }
             incomingConnection(talk,peer);
