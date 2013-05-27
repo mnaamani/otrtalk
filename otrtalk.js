@@ -33,7 +33,8 @@ function main(){
     .option("-s, --secret [secret]","secret to use for SMP authentication [connect mode]","")
     .option("--pidgin","check pidgin buddylist for known fingerprints [connect mode]","")
     .option("--adium","check adium buddylist for known fingerprints [connect mode]","")
-    .option("-o, --otr [otr4-em|otr3]","specify otr module to use for profile","otr4-em");//only takes effect when creating a profile
+    .option("-o, --otr [otr4-em|otr3]","specify otr module to use for profile","otr4-em")//only takes effect when creating a profile
+    .option("--lan","broadcast on the LAN, don't use telehash p2p discovery");
     
   program
   .command('connect [buddy]')
@@ -161,8 +162,13 @@ function otrtalk(use_profile,buddy,talk_mode){
                                 Talk.MODE = talk_mode = 'connect';
                             }
                         }
-
-                        Network = require("./lib/network");
+                        if(program.lan){
+                            console.log("Buddy Discovery Mode: LAN Broadcast");
+                            Network = require("./lib/net-broadcast");
+                        }else{
+                            console.log("Buddy Discovery Mode: Telehash");
+                            Network = require("./lib/net-telehash");
+                        }
                         //esnure fingerprint if entered as option is correctly formatted
                         ensureFingerprint(program.fingerprint,function(valid_fingerprint){
                           if(talk_mode == 'connect'){
