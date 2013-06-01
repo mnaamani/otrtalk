@@ -19,7 +19,6 @@ function OTR_INSTANCE(choice){
     if(otr) return otr;//only one global instance
     var otr_mod =  choice ? otr_modules[choice] : 'otr4-em';
     otr = otr_mod ? require(otr_mod) : undefined;
-    if(otr !== undefined) console.log("-- <OTR module>",otr_mod);
     return otr;
 }
 
@@ -30,13 +29,13 @@ function main(){
   init_stdin_stderr();
   program
     .version("0.1.12")
-    .option("-p, --profile [profile]","specify profile to use","")
-    .option("-f, --fingerprint [fingerprint]","public key fingerprint of buddy to connect with [connect mode]","")
-    .option("-s, --secret [secret]","secret to use for SMP authentication [connect mode]","")
-    .option("--pidgin","check pidgin buddylist for known fingerprints [connect mode]","")
-    .option("--adium","check adium buddylist for known fingerprints [connect mode]","")
-    .option("-o, --otr [otr4-em|otr3]","specify otr module to use for profile","otr4-em")//only takes effect when creating a profile
-    .option("--lan","broadcast on the LAN, don't use telehash p2p discovery");
+    .option("-p, --profile [profile]","","")
+    .option("-f, --fingerprint [fingerprint]","\n\t\tOTR key fingerprint of buddy to connect with (connect mode only)\n","")
+    .option("-s, --secret [secret]","\n\t\tSMP authentication secret (connect mode only)\n","")
+    .option("--pidgin","\n\t\tcheck pidgin buddylist for known fingerprints (connect mode only)\n","")
+    .option("--adium","\n\t\tcheck adium buddylist for known fingerprints (connect mode only)\n","")
+    .option("-o, --otr [otr4-em|otr3]","\n\t\tOTR module to use for profile\n","otr4-em")//only takes effect when creating a profile
+    .option("--lan","\n\t\tbroadcast on the LAN, don't use telehash p2p discovery (experimental feature)\n");
     
   program
   .command('connect [buddy]')
@@ -72,7 +71,7 @@ function main(){
 
   program
     .command('buddies [profile]')
-    .description('print list of trusted buddies from profile')
+    .description('print profile buddy-list')
     .action( function(profile){
         got_command = true;
         profile_manage.apply(this,['buddies-list',profile||program.profile]);
@@ -89,7 +88,6 @@ function main(){
   program.parse(process.argv);
   process.stdin.on('end', shutdown );
   if(!got_command) {
-    console.log("no command entered.");
     program.help();
   }
 }
