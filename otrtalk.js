@@ -596,8 +596,8 @@ function profile_manage(action, profilename, arg1, arg2){
                             if(files){
                               var user = new otr.User( files );
                               ensureAccount(user,profile.accountname,profile.protocol,function(result,err){
-                                if(err) {
-                                    console.log("Error generating key.",err.message);
+                                if(err || result == 'not-found') {
+                                    if(err) console.log("Error generating key.",err.message);
                                     process.exit();
                                 }
                                 if(result=='new'){
@@ -789,6 +789,7 @@ function do_import_key(filename,profilename,id){
                 });
                 console.log(table.toString());
                 console.log("Imported key successfully to profile:",profilename);
+                process.exit();
                 return;//success
               }catch(E){
                 console.log("Key Import Failed!",E);
