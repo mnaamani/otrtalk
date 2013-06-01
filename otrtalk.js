@@ -8,6 +8,7 @@ var Network;
 var SessionManager = require("./lib/sessions");
 var Chat = require("./lib/chat");
 var fs_existsSync = fs.existsSync || path.existsSync;
+var crypto = require("crypto");
 
 var otr;
 var otr_modules = {
@@ -66,7 +67,15 @@ function main(){
     .description('remove buddy from profile')
     .action( function(buddy,profile){
         got_command = true;
-        profile_manage.apply(this,['forget-buddy',profile||program.profile,buddy]);
+        profile_manage.apply(this,['buddies-forget',profile||program.profile,buddy]);
+     });
+
+  program
+    .command('buddies [profile]')
+    .description('print list of trusted buddies from profile')
+    .action( function(profile){
+        got_command = true;
+        profile_manage.apply(this,['buddies-list',profile||program.profile]);
      });
 
   program
@@ -368,6 +377,41 @@ function openKeyStore(profile,buddy,vfs,password,next){
   next(files);
 }
 
+function accessFingerprintsStore(profile,VFS,next){
+  if(VFS){
+      program.password('enter key-store password: ', '', function(password){
+            openFingerprintsStore(profile,password,next);
+      });
+  }else{
+      openFingerprintsStore(profile,undefined,next);
+  }
+}
+
+function openFingerprintsStore(profile,password,next){
+  var buddies = [];
+  profile.buddies.forEach(function(buddy){
+        var fp_file = path.join(profile.fingerprints,buddy.alias);
+        if(!fs_existsSync(fp_file)){
+            buddies.push({
+                alias:buddy.alias,
+                username:buddy.id,
+                fingerprint:''
+            });
+            return;
+        }
+        var buf = openEncryptedFile(fp_file,password);
+        var entry = buf.toString().split(/\s+/);
+        if(entry[4]==='smp') buddies.push({
+            alias:buddy.alias,
+            username:entry[0],
+            accountname:entry[1],
+            protocol:entry[2],
+            fingerprint:entry[3]
+        });
+  });
+  next(buddies);
+}
+
 function ensureAccount(user,accountname,protocol,next){
     if(!user.fingerprint( accountname, protocol)){
        program.confirm("Generate your OTR key now [y/n]? ",function(ok){
@@ -597,7 +641,7 @@ function profile_manage(action, profilename, arg1, arg2){
                     console.log("Profile does not exist");
                 }
                 break;
-            case 'forget-buddy':
+            case 'buddies-forget':
                 buddy = arg1;
                 if(!buddy){ console.log("Buddy not specified.");return;}
                 if(!pm.profiles() || !pm.profiles().length) return console.log("No profiles found.");
@@ -618,6 +662,31 @@ function profile_manage(action, profilename, arg1, arg2){
                        process.exit();
                    });
                 }else console.log("Buddy not found.");
+                break;
+            case 'buddies-list':
+                if(!pm.profiles() || !pm.profiles().length) return console.log("No profiles found.");
+                if(!profilename){
+                    if(pm.profiles().length>1) {console.log("Profile not specified.");return;}
+                    profilename = pm.profiles()[0];
+                }
+                profile = pm.profile(profilename);
+                if(!profile) {console.log('Profile "'+profilename+'" not found.');break;}
+                otr = OTR_INSTANCE(profile.otr);
+
+                accessFingerprintsStore(profile,(otr.VFS?otr.VFS():undefined),function(buddies){
+                    if(!buddies.length) process.exit();
+                    var Table = require("cli-table");
+                    var table = new Table({
+                        head:['buddy','otrtalk id','fingerprint']
+                    });
+                    buddies.forEach( function(buddy){
+                        var trusted = validateFP(buddy.fingerprint);
+                        table.push( [buddy.alias,buddy.username,trusted?trusted:''] );
+                    });
+                    console.log(" == Buddies");
+                    console.log(table.toString());
+                    process.exit();
+                });
                 break;
         }
     }
@@ -749,7 +818,7 @@ function imapp_fingerprints_parse(){
             if(buddies && buddies.length){
                 buddies.forEach(function(line){
                     var entry = line.split(/\s+/);
-                    if(entry.length == 5 && entry[4]=='smp') parsed.entries.push({
+                    if(entry[4]=='smp') parsed.entries.push({
                         username:entry[0],
                         accountname:entry[1],
                         protocol:entry[2],
@@ -776,6 +845,14 @@ function imapp_fingerprints_match(fp){
 
 function resolve_home_path(str){
    return str.replace("~", process.env[process.platform=='win32'?'USERPROFILE':'HOME']);
+}
+
+function openEncryptedFile(filename,password){
+    var buf = fs.readFileSync(filename);
+    if(!password) return buf;
+    var c = crypto.createDecipher('aes256', password);
+    var output = c.update(buf.toString('binary'),'binary','binary')+c.final('binary');
+    return (new Buffer(output,'binary'));
 }
 
 //platform specific paths to private key stores
