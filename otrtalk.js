@@ -18,6 +18,7 @@ function OTR_INSTANCE(choice){
     if(otr) return otr;//only one global instance
     var otr_mod =  choice ? otr_modules[choice] : 'otr4-em';
     otr = otr_mod ? require(otr_mod) : undefined;
+    if(otr !== undefined) console.log("-- <OTR module>",otr_mod);
     return otr;
 }
 
@@ -98,57 +99,51 @@ function otrtalk(use_profile,buddy,talk_mode){
     var Talk = {};
     Talk.MODE = talk_mode;
     var profileManager = require("./lib/profiles");
-    process.stdout.write("\nprofile check: ");
+
     getProfile(profileManager,use_profile,function(profile){
         if(!profile) process.exit();
-        console.log("[ok] using profile:",profile.name);
+        console.log("-- <Profile>",profile.name);
         Talk.profile = profile;
         Talk.id = Talk.profile.id;//otrtalk id
         Talk.accountname = Talk.profile.accountname;
         Talk.protocol = Talk.profile.protocol;
 
-        process.stdout.write("\nbuddy check: ");
         getBuddy(Talk.profile,buddy,Talk.MODE,function(buddy){
             if(!buddy) process.exit();
             Talk.buddy = buddy;
             Talk.buddyID = profile.buddyID(buddy);
             if(Talk.buddyID == profile.accountname){
-                console.log("Buddy has same otrtalk id as you!");
+                console.log("otrtalk id conflict. Profile and buddy have same otrtalk id.");
                 process.exit();
             }
-            console.log("[ok]");
-            process.stdout.write("\notr module check: ");
+            console.log("-- <Buddy>",Talk.buddy,Talk.buddyID);
             if(!OTR_INSTANCE(Talk.profile.otr)){
-             console.log("invalid otr module.");
+             console.log("Error: Invalid OTR module.",Talk.profile.otr);
              process.exit();
             }
-            console.log("[ok]");
-            process.stdout.write("\nkeystore check: ");
+
             //access keystore - prepare new one if not exists.
             accessKeyStore(Talk.profile,Talk.buddy,(otr.VFS?otr.VFS():undefined),true,function(files){
                 if(!files) process.exit();
-                console.log("[ok]");
                 Talk.files = files;
                 Talk.user = new otr.User(Talk.files);
-                process.stdout.write("\naccount check: ");
                 ensureAccount(Talk.user,Talk.accountname,Talk.protocol,function(result,err){
-                    if(err) console.log("error generating key.",err.message);
+                    if(err) console.log("Error: Getting key.",err.message);
                     if(!result || result=='not-found' || err ) process.exit();
                     if(result=='new') Talk.files.save();//save newly created key.
                     
                     ensureInstag(Talk.user,Talk.accountname,Talk.protocol,function(result,err){
                         if(result=='error'){
-                            console.log("error getting instance tag:",err);
+                            console.log("Error: Unable to get instance tag.",err);
                             process.exit();
                         }
                         if(result=='new') Talk.files.save();//save newly created instance tag
-                        console.log("Using DSA Key fingerprint:",Talk.user.fingerprint(Talk.accountname,Talk.protocol));
+                        console.log("-- <OTR Key>",Talk.user.fingerprint(Talk.accountname,Talk.protocol));
 
                         //clear userstate.. (new one will be created for each incoming connection)
                         Talk.user.state.free();
                         delete Talk.user.state;
                         delete Talk.user;
-                        console.log("[ok]");
 
                         //if the fingerprints file exists.. we have already trusted buddy fingerprint
                         if( fs_existsSync(Talk.files.fingerprints) ){
@@ -163,10 +158,10 @@ function otrtalk(use_profile,buddy,talk_mode){
                             }
                         }
                         if(program.lan){
-                            console.log("Buddy Discovery Mode: LAN Broadcast");
+                            console.log("-- <Network mode> LAN Broadcast");
                             Network = require("./lib/net-broadcast");
                         }else{
-                            console.log("Buddy Discovery Mode: Telehash");
+                            console.log("-- <Network mode> Telehash");
                             Network = require("./lib/net-telehash");
                         }
                         //esnure fingerprint if entered as option is correctly formatted
@@ -187,7 +182,7 @@ function otrtalk(use_profile,buddy,talk_mode){
                           }
                           //ensure we have a secret if we are in connect mode.
                           if(talk_mode =='connect' && !program.secret){
-                            console.log("\nWhen establishing a new trust with a buddy you must provide a shared secret.");
+                            console.log("When establishing a new trust with a buddy you must provide a shared secret.");
                             console.log("This will be used by SMP authentication during connection establishment.");
                             program.password("Enter SMP secret: ","*",function(secret){
                                Talk.secret = secret;
@@ -241,10 +236,10 @@ function getProfile( pm, name, next ){
       profile = pm.profile(name);
       if(profile) return next(profile);
       console.log("Profile [",name,"] doesn't exist.");
-      program.confirm("create it now [y/n]? ",function(ok){
+      program.confirm("  create it now [y/n]? ",function(ok){
         if(ok){
           console.log("Enter the otrtalk id for this profile. This is a public name that you give out to your buddies.");
-          program.prompt("otrtalk id: ",function(accountname){
+          program.prompt("  otrtalk id: ",function(accountname){
               if(!accountname) {next();return;}
               next(pm.add(name,{
                 accountname:accountname,
@@ -265,16 +260,16 @@ function getProfile( pm, name, next ){
             pm.profiles().forEach(function(prof){
                 list.push( prof );
             });
-            console.log("Profile not specified, select a profile from list:");
+            console.log("Select a profile:");
             program.choose(list, function(i){
                 next(pm.profile(list[i]));
             });
         }else{
             //no profiles exist at all.. create a new one
-            console.log("No pofiles exist, let's create one now.");
-            program.prompt("profile name: ",function(name){
-                console.log("Enter an otrtalk id for this profile. This is a public name that you give out to your buddies.");
-                program.prompt("otrtalk id: ",function(accountname){
+            console.log("No profile exists, let's create one now.");
+            program.prompt("  profile name: ",function(name){
+                console.log("Enter an otrtalk id for this profile.\nThis is a public name that you give out to your buddies.");
+                program.prompt("  otrtalk id: ",function(accountname){
                     if(!accountname) {next();return;}
                     next(pm.add(name,{
                         accountname:accountname,
@@ -290,7 +285,7 @@ function getBuddy(profile,buddy,mode,next){
     var need_new_buddy = false;
     if(!buddy){
         if(profile.buddies.length){
-            console.log('Select a buddy to',mode,'with:');
+            console.log('Select buddy:');
             var list = [];            
             profile.buddies.forEach(function(bud){
                 list.push( bud.alias+":"+bud.id );
@@ -309,9 +304,9 @@ function getBuddy(profile,buddy,mode,next){
             return;
         }
         console.log("Buddy not found.");
-        program.confirm("add ["+buddy+"] to your buddy list now [y/n]? ",function(ok){
+        program.confirm("  add ["+buddy+"] to your buddy list now [y/n]? ",function(ok){
             if(ok){
-                program.prompt("enter "+buddy+"'s otrtalk id: ", function(id){
+                program.prompt("  "+buddy+"'s otrtalk id: ", function(id){
                   if(!id) {next();return;}
                   profile.addBuddy(buddy,id);
                   next(buddy);
@@ -322,8 +317,8 @@ function getBuddy(profile,buddy,mode,next){
 
     if(need_new_buddy) {
         console.log("Enter new buddy details:");
-        program.prompt("alias: ",function(buddy){
-            program.prompt(buddy+"'s otrtalk id: ", function(id){
+        program.prompt("  alias: ",function(buddy){
+            program.prompt("  "+buddy+"'s otrtalk id: ", function(id){
                 if(!id) {next();return;}
                 profile.addBuddy(buddy,id);
                 next(buddy);
@@ -348,11 +343,11 @@ function accessKeyStore(profile,buddy,VFS,create,next){
         if(create){
         //first time doble prompt for new password.
         console.log("Your keys are stored in an encrypted key-store, protected with a password.");
-        console.log("** Pick a long passphrase to protect your keys in case the key-store is stolen **");
+        console.log("** Pick a long password to protect your keys in case the key-store is stolen **");
         program.password('new key-store password: ', '', function(password){
         program.password('      confirm password: ', '', function(password_confirm){
                 if(password !== password_confirm){
-                    console.log("passwords don't match!");
+                    console.log("password mismatch!");
                     next();
                 }else{
                     openKeyStore(profile,buddy,VFS,password,next);
@@ -375,8 +370,7 @@ function openKeyStore(profile,buddy,vfs,password,next){
 
 function ensureAccount(user,accountname,protocol,next){
     if(!user.fingerprint( accountname, protocol)){
-       console.log("A DSA key needs to be generated for the profile.");
-       program.confirm("Generate one now [y/n]? ",function(ok){
+       program.confirm("Generate your OTR key now [y/n]? ",function(ok){
           if(ok){
             user.generateKey(accountname,protocol,function(err){
               if(err){
@@ -398,7 +392,7 @@ function ensureInstag(user,accountname,protocol,next){
     var instag = user.findInstag(accountname, protocol);
     if(instag) {next();return;}   
 
-    console.log("creating new instance tag.");
+    console.log("creating instance tag.");
     user.generateInstag( accountname, protocol,function(err,instag){
        if(err){
           next('error',err);
@@ -409,9 +403,9 @@ function ensureInstag(user,accountname,protocol,next){
 function startTalking(talk){
     talk.link = new Network.Link(talk.id || talk.accountname, talk.buddyID);
 
-    console.log("\nStarting Network.");
+    console.log("initiating network...");
     Network.init(function(){
-        console.log("\nContacting", talk.buddy,"...");
+        console.log("[",talk.MODE,"mode ] contacting:", talk.buddy);
         talk.link.connect(function( peer ){
             if(Chat.ActiveSession() || talk.found_buddy ){
               peer.disconnectLater();
@@ -613,7 +607,7 @@ function profile_manage(action, profilename, arg1, arg2){
                 profile = pm.profile(profilename);
                 if(!profile) {console.log('Profile "'+profilename+'" not found.');break;}
                 if(profile.buddyID(buddy)){
-                   program.confirm("Are you sure you want to remove "+buddy+" [y/n]? ",function(ok){
+                   program.confirm("Are you sure you want to remove buddy: "+buddy+" [y/n]? ",function(ok){
                        if(!ok) process.exit();
                        if(fs_existsSync(profile.buddyFingerprints(buddy))){
                            fs.unlink(profile.buddyFingerprints(buddy));
