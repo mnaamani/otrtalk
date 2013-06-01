@@ -531,6 +531,7 @@ function profile_manage(action, profilename, arg1, arg2){
                             table.push([account.accountname,account.protocol,account.fingerprint]);
                         });
                         console.log(table.toString());
+                        process.exit();
                     }
                 });
                 break;
