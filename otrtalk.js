@@ -42,7 +42,7 @@ function main(){
   .description('establish new trust with buddy')
   .action(function(buddy){
     got_command = true;
-    otrtalk(program.profile,buddy,'connect');
+    command_connect_and_chat(program.profile,buddy,'connect');
   });
 
   program
@@ -50,7 +50,7 @@ function main(){
   .description('chat with trusted buddy')
   .action(function(buddy){
     got_command = true;
-    otrtalk(program.profile,buddy,'chat');
+    command_connect_and_chat(program.profile,buddy,'chat');
   });
 
   program
@@ -58,7 +58,7 @@ function main(){
     .description('manage profiles')
     .action( function(){
         got_command = true;
-        profile_manage.apply(this,arguments);
+        command_profiles.apply(this,arguments);
      });
 
   program
@@ -66,7 +66,7 @@ function main(){
     .description('remove buddy from profile')
     .action( function(buddy,profile){
         got_command = true;
-        profile_manage.apply(this,['buddies-forget',profile||program.profile,buddy]);
+        command_profiles.apply(this,['buddies-forget',profile||program.profile,buddy]);
      });
 
   program
@@ -74,7 +74,7 @@ function main(){
     .description('print profile buddy-list')
     .action( function(profile){
         got_command = true;
-        profile_manage.apply(this,['buddies-list',profile||program.profile]);
+        command_profiles.apply(this,['buddies-list',profile||program.profile]);
      });
 
   program
@@ -82,7 +82,7 @@ function main(){
     .description('import a key from pidgin/adium into new profile')
     .action( function(app,profile,id){
         got_command = true;
-        import_key_wizard(app,profile,id);
+        command_import_key(app,profile,id);
     });
 
   program
@@ -90,7 +90,7 @@ function main(){
     .description('list authenticated buddies from piding/adium')
     .action( function(){
         got_command = true;
-        imapp_fingerprints_list();
+        command_im_buddies();
     });
 
   program.parse(process.argv);
@@ -109,8 +109,11 @@ function init_stdin_stderr(){
     });
 }
 
-/////// CHAT and CONNECT commands handled both by otrtalk()
-function otrtalk(use_profile,buddy,talk_mode){
+
+/*
+    connect and chat commands
+*/
+function command_connect_and_chat(use_profile,buddy,talk_mode){
     var Talk = {};
     Talk.MODE = talk_mode;
     var profileManager = require("./lib/profiles");
@@ -215,6 +218,7 @@ function otrtalk(use_profile,buddy,talk_mode){
         });
     });
 }
+
 function ensureFingerprint(fp, next){
     if(fp){
         next(validateFP(fp));
@@ -356,7 +360,7 @@ function accessKeyStore(profile,buddy,VFS,create,next){
 
     }else{
         if(create){
-        //first time doble prompt for new password.
+        //first time double prompt for new password.
         console.log("Your keys are stored in an encrypted key-store, protected with a password.");
         console.log("** Pick a long password to protect your keys in case the key-store is stolen **");
         program.password('new key-store password: ', '', function(password){
@@ -546,8 +550,11 @@ function startChat(talk,session){
    console.log('[entering secure chat]\nbuddy fingerprint:',session.fingerprint());
    Chat.attach(talk,session);
 }
-////// Profiles Command
-function profile_manage(action, profilename, arg1, arg2){
+
+/*
+ *  profiles command
+ */
+function command_profiles(action, profilename, arg1, arg2){
     var pm = require("./lib/profiles");  
     var profile;
     profilename = profilename || program.profile;
@@ -709,7 +716,10 @@ function shutdown(){
     },300);
 }
 
-function import_key_wizard(app,profile,id){
+/*
+ * import-key command
+ */
+function command_import_key(app,profile,id){
     var filename;
     profile = profile || program.profile;
     if(!app){
@@ -851,7 +861,10 @@ function imapp_fingerprints_match(fp){
     return match;
 }
 
-function imapp_fingerprints_list(){
+/*
+ * im-buddies command
+ */
+function command_im_buddies(){
   ['pidgin','adium'].forEach(function(app){
     var buddies = imapp_fingerprints_parse(app);
     if(!buddies.entries.length) return;
