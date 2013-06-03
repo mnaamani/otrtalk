@@ -62,19 +62,11 @@ function main(){
      });
 
   program
-    .command('forget [buddy] [profile]')
-    .description('remove buddy from profile')
-    .action( function(buddy,profile){
+    .command('buddies [list|forget] [buddy]')
+    .description('manage otrtalk buddies')
+    .action( function(){
         got_command = true;
-        command_profiles.apply(this,['buddies-forget',profile||program.profile,buddy]);
-     });
-
-  program
-    .command('buddies [profile]')
-    .description('print profile buddy-list')
-    .action( function(profile){
-        got_command = true;
-        command_profiles.apply(this,['buddies-list',profile||program.profile]);
+        command_buddies.apply(this,arguments);
      });
 
   program
@@ -554,11 +546,10 @@ function startChat(talk,session){
 /*
  *  profiles command
  */
-function command_profiles(action, profilename, arg1, arg2){
+function command_profiles(action, profilename, accountname){
     var pm = require("./lib/profiles");  
     var profile;
     profilename = profilename || program.profile;
-    var accountname, buddy;
     if(!action){
            pm.list();
     }else{
@@ -595,7 +586,6 @@ function command_profiles(action, profilename, arg1, arg2){
             case 'add':
                 if(!profilename) {console.log("Profile not specified.");return;}
                 profile = pm.profile(profilename);
-                accountname = arg1;
                 if(!profile){
                     if(!accountname){ console.log("No otrtalk id specified"); break;}
                     //create profile with default settings..
@@ -654,8 +644,20 @@ function command_profiles(action, profilename, arg1, arg2){
                     console.log("Profile does not exist");
                 }
                 break;
-            case 'buddies-forget':
-                buddy = arg1;
+        }
+    }
+}
+
+/*
+ *  buddies command
+ */
+function command_buddies(action,buddy){
+    var pm = require("./lib/profiles");  
+    var profile;
+    profilename = program.profile;
+    if(!action) action = 'list';
+        switch(action){
+            case 'forget':
                 if(!buddy){ console.log("Buddy not specified.");return;}
                 if(!pm.profiles() || !pm.profiles().length) return console.log("No profiles found.");
                 if(!profilename){
@@ -676,7 +678,7 @@ function command_profiles(action, profilename, arg1, arg2){
                    });
                 }else console.log("Buddy not found.");
                 break;
-            case 'buddies-list':
+            case 'list':
                 if(!pm.profiles() || !pm.profiles().length) return console.log("No profiles found.");
                 if(!profilename){
                     if(pm.profiles().length>1) {console.log("Profile not specified.");return;}
@@ -702,7 +704,6 @@ function command_profiles(action, profilename, arg1, arg2){
                 });
                 break;
         }
-    }
 }
 
 function shutdown(){
