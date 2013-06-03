@@ -10,6 +10,8 @@ var Chat = require("./lib/chat");
 var fs_existsSync = fs.existsSync || path.existsSync;
 var crypto = require("crypto");
 
+var EXITING = false;
+
 var otr;
 var otr_modules = {
     "otr3":"otr3",
@@ -22,19 +24,47 @@ function OTR_INSTANCE(choice){
     return otr;
 }
 
+//platform specific paths to private key stores
+var IMAPPS = {
+  'pidgin':{
+    'linux': {keys:'~/.purple/otr.private_key',fingerprints:'~/.purple/otr.fingerprints'},
+    'darwin': {keys:'~/.purple/otr.private_key',fingerprints:'~/.purple/otr.fingerprints'},
+    'win32': {keys:'~/Application Data/.purple/otr.private_key',fingerprints:'~/Application Data/.purple/otr.fingerprints'}
+  },
+  'adium':{
+    'darwin':{keys:'~/Library/Application Support/Adium 2.0/Users/Default/otr.private_key',
+              fingerprints:'~/Library/Application Support/Adium 2.0/Users/Default/otr.fingerprints'}
+  }
+};
+
 process.title = "otrtalk";
 
-function main(){
+function init_stdin_stderr(){
+    process.__defineGetter__('stderr', function(){
+        return {write:function(){}};
+    });
+
+    if(process.platform!='win32') process.on('SIGINT',function(){
+        shutdown();
+    });
+}
+
+function debug(){
+    if(program.verbose) console.log.apply(null,arguments);
+}
+
+(function(){
   var got_command = false;
   init_stdin_stderr();
   program
     .version("0.1.12")
+    .option("-v, --verbose","show some debug info")
     .option("-p, --profile [profile]","","")
     .option("-f, --fingerprint [fingerprint]","\n\t\tOTR key fingerprint of buddy to connect with (connect mode only)\n","")
     .option("-s, --secret [secret]","\n\t\tSMP authentication secret (connect mode only)\n","")
+    .option("-o, --otr [otr4-em|otr3]","\n\t\tOTR module to use for profile\n","otr4-em")//only takes effect when creating a profile
     .option("--pidgin","\n\t\tcheck pidgin buddylist for known fingerprints (connect mode only)\n","")
     .option("--adium","\n\t\tcheck adium buddylist for known fingerprints (connect mode only)\n","")
-    .option("-o, --otr [otr4-em|otr3]","\n\t\tOTR module to use for profile\n","otr4-em")//only takes effect when creating a profile
     .option("--lan","\n\t\tbroadcast on the LAN, don't use telehash p2p discovery (experimental feature)\n");
     
   program
@@ -90,17 +120,18 @@ function main(){
   if(!got_command) {
     program.help();
   }
-}
+})();//process commands
 
-function init_stdin_stderr(){
-    process.__defineGetter__('stderr', function(){
-        return {write:function(){}};
-    });
-    if(process.platform!='win32') process.on('SIGINT',function(){
-        shutdown();
-    });
-}
+function shutdown(){
+    if(EXITING) return;
+    EXITING = true;
 
+    if(Network) Network.shutdown();
+
+    setTimeout(function(){
+       process.exit();
+    },300);
+}
 
 /*
     connect and chat commands
@@ -112,7 +143,7 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
 
     getProfile(profileManager,use_profile,function(profile){
         if(!profile) process.exit();
-        console.log("-- <Profile>",profile.name);
+        debug("-- <Profile>",profile.name);
         Talk.profile = profile;
         Talk.id = Talk.profile.id;//otrtalk id
         Talk.accountname = Talk.profile.accountname;
@@ -126,7 +157,7 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
                 console.log("otrtalk id conflict. Profile and buddy have same otrtalk id.");
                 process.exit();
             }
-            console.log("-- <Buddy>",Talk.buddy,Talk.buddyID);
+            debug("-- <Buddy>",Talk.buddy,Talk.buddyID);
             if(!OTR_INSTANCE(Talk.profile.otr)){
              console.log("Error: Invalid OTR module.",Talk.profile.otr);
              process.exit();
@@ -148,7 +179,7 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
                             process.exit();
                         }
                         if(result=='new') Talk.files.save();//save newly created instance tag
-                        console.log("-- <OTR Key>",Talk.user.fingerprint(Talk.accountname,Talk.protocol));
+                        debug("-- <OTR Key>",Talk.user.fingerprint(Talk.accountname,Talk.protocol));
 
                         //clear userstate.. (new one will be created for each incoming connection)
                         Talk.user.state.free();
@@ -158,20 +189,20 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
                         //if the fingerprints file exists.. we have already trusted buddy fingerprint
                         if( fs_existsSync(Talk.files.fingerprints) ){
                             if(talk_mode=='connect'){
-                                console.log("You already have a trust with this buddy.\nSwitching to 'chat' mode.");
+                                debug("You already have a trust with this buddy.\nSwitching to 'chat' mode.");
                                 Talk.MODE = talk_mode = 'chat';
                             }
                         }else{
                             if(talk_mode=='chat'){
-                                console.log("You haven't yet established a trust with this buddy.\nSwitching to 'connect' mode.");
+                                debug("You haven't yet established a trust with this buddy.\nSwitching to 'connect' mode.");
                                 Talk.MODE = talk_mode = 'connect';
                             }
                         }
                         if(program.lan){
-                            console.log("-- <Network mode> LAN Broadcast");
+                            debug("-- <Network mode> LAN Broadcast");
                             Network = require("./lib/net-broadcast");
                         }else{
-                            console.log("-- <Network mode> Telehash");
+                            debug("-- <Network mode> Telehash");
                             Network = require("./lib/net-telehash");
                         }
                         //esnure fingerprint if entered as option is correctly formatted
@@ -183,10 +214,10 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
                             }
                             if(valid_fingerprint){ 
                                 Talk.fingerprint = valid_fingerprint;
-                                console.log("Will look for buddy with fingerprint:",Talk.fingerprint);
+                                debug("Will look for buddy with fingerprint:",Talk.fingerprint);
                             }
                             if(program.pidgin || program.adium){
-                                console.log("parsing IM app fingerprints");
+                                debug("parsing IM app fingerprints");
                                 Talk.trusted_fingerprints = imapp_fingerprints_parse();
                             }
                           }
@@ -209,6 +240,107 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
             });
         });
     });
+}
+
+
+function startTalking(talk){
+    talk.link = new Network.Link(talk.id || talk.accountname, talk.buddyID);
+
+    debug("initiating network...");
+    Network.init(function(){
+        console.log("[",talk.MODE,"mode ] contacting:",talk.buddy,"..");
+        talk.link.connect(function( peer ){
+            if(Chat.ActiveSession() || talk.found_buddy ){
+              peer.disconnectLater();
+              return;
+            }
+            incomingConnection(talk,peer);
+        });
+    });
+}
+
+function incomingConnection(talk,peer){
+    var session = new SessionManager.TalkSession({
+            mode:function(){ return talk.MODE },
+            accountname : talk.accountname,
+            protocol : talk.protocol,
+            buddy : talk.buddy,
+            buddyID : talk.buddyID,
+            files : talk.files,
+            secret : talk.secret,
+            buddyFP : talk.fingerprint,
+            trustedFP: talk.trusted_fingerprints,
+            verbose : program.verbose
+        }, otr, peer);
+
+    session.on("auth",function(trust){
+       if(!talk.auth_queue) talk.auth_queue = async.queue(handleAuth,1);
+       talk.auth_queue.push({session:session,talk:talk,peer:peer,trust:trust});
+    });
+
+    session.on("closed",function(){
+        if(Chat.ActiveSession() == this) shutdown();
+        if(this._on_auth_complete) this._on_auth_complete();
+    });
+
+    session.on("start_chat",function(){
+        if(talk.MODE=='connect') this.writeAuthenticatedFingerprints();
+        startChat(talk,this);
+    });
+
+    session.start();
+}
+
+function handleAuth(_,callback){
+    var session = _.session,
+        talk = _.talk,
+        trust = _.trust,
+        peer = _.peer;
+
+    if(talk.found_buddy){
+        session.end();
+        callback();
+        return;
+    }
+
+    debug("[verifying connection]");
+    session._on_auth_complete = callback;
+    switch( talk.MODE ){
+        case 'chat':
+            assert(trust.Trusted && !trust.NewFingerprint);
+            session.go_chat();
+            break;
+
+        case 'connect':
+           if(trust.NewFingerprint){
+            console.log("You have connected to someone who claims to be",talk.buddyID);
+            console.log("They know the authentication secret.");
+            console.log("Their public key fingerprint:\n");
+            console.log("\t"+session.fingerprint());
+            program.confirm("\nDo you want to trust this fingerprint [y/n]? ",function(ok){
+                if(!ok){
+                    debug("[rejecting connection]");
+                    session.end();
+                }else{
+                    session.go_chat();
+                }
+            });
+          }else if(trust.Trusted){
+            //we used connect mode and found an already trusted fingerprint...
+            session.go_chat();
+          }
+          break;
+     }
+}
+
+function startChat(talk,session){
+   talk.link.pause();
+   talk.MODE = 'chat';
+   talk.found_buddy = true;
+   if(session._on_auth_complete) session._on_auth_complete();
+   delete session._on_auth_complete;
+   console.log('[connected]\nbuddy:',session.fingerprint());
+   Chat.attach(talk,session);
 }
 
 function ensureFingerprint(fp, next){
@@ -238,7 +370,6 @@ function validateFP(str){
        if(!segments[0].match( /^[A-F0-9]{40}$/)) return;
        return segments[0].match(/([A-F0-9]{8})/g).join(" ");
     }else return;
-
 }
 
 function getProfile( pm, name, next ){
@@ -438,7 +569,7 @@ function ensureInstag(user,accountname,protocol,next){
     var instag = user.findInstag(accountname, protocol);
     if(instag) {next();return;}   
 
-    console.log("creating instance tag.");
+    debug("creating instance tag.");
     user.generateInstag( accountname, protocol,function(err,instag){
        if(err){
           next('error',err);
@@ -446,102 +577,6 @@ function ensureInstag(user,accountname,protocol,next){
     });
  }
 
-function startTalking(talk){
-    talk.link = new Network.Link(talk.id || talk.accountname, talk.buddyID);
-
-    console.log("initiating network...");
-    Network.init(function(){
-        console.log("[",talk.MODE,"mode ] contacting:", talk.buddy);
-        talk.link.connect(function( peer ){
-            if(Chat.ActiveSession() || talk.found_buddy ){
-              peer.disconnectLater();
-              return;
-            }
-            incomingConnection(talk,peer);
-        });
-    });
-}
-
-function incomingConnection(talk,peer){
-    var session = new SessionManager.TalkSession({
-            mode:function(){ return talk.MODE },
-            accountname : talk.accountname,
-            protocol : talk.protocol,
-            buddy : talk.buddy,
-            buddyID : talk.buddyID,
-            files : talk.files,
-            secret : talk.secret,
-            buddyFP : talk.fingerprint,
-            trustedFP: talk.trusted_fingerprints
-        }, otr, peer);
-
-    session.on("auth",function(trust){
-       if(!talk.auth_queue) talk.auth_queue = async.queue(handleAuth,1);
-       talk.auth_queue.push({session:session,talk:talk,peer:peer,trust:trust});
-    });
-
-    session.on("closed",function(){
-        if(Chat.ActiveSession() == this) shutdown();
-        if(this._on_auth_complete) this._on_auth_complete();
-    });
-
-    session.on("start_chat",function(){
-        if(talk.MODE=='connect') this.writeAuthenticatedFingerprints();
-        startChat(talk,this);
-    });
-
-    session.start();
-}
-function handleAuth(_,callback){
-    var session = _.session,
-        talk = _.talk,
-        trust = _.trust,
-        peer = _.peer;
-
-    if(talk.found_buddy){
-        session.end();
-        callback();
-        return;
-    }
-
-    console.log("[verifying connection]");
-    session._on_auth_complete = callback;
-    switch( talk.MODE ){
-        case 'chat':
-            assert(trust.Trusted && !trust.NewFingerprint);
-            session.go_chat();
-            break;
-
-        case 'connect':
-           if(trust.NewFingerprint){
-            console.log("You have connected to someone who claims to be",talk.buddyID);
-            console.log("They know the authentication secret.");
-            console.log("Their public key fingerprint:\n");
-            console.log("\t"+session.fingerprint());
-            program.confirm("\nDo you want to trust this fingerprint [y/n]? ",function(ok){
-                if(!ok){
-                    console.log("[rejecting connection]");
-                    session.end();
-                }else{
-                    session.go_chat();
-                }
-            });
-          }else if(trust.Trusted){
-            //we used connect mode and found an already trusted fingerprint...
-            session.go_chat();
-          }
-          break;
-     }
-}
-function startChat(talk,session){
-   talk.link.pause();
-   talk.MODE = 'chat';
-   talk.found_buddy = true;
-   if(session._on_auth_complete) session._on_auth_complete();
-   delete session._on_auth_complete;
-   console.log('[entering secure chat]\nbuddy fingerprint:',session.fingerprint());
-   Chat.attach(talk,session);
-}
 
 /*
  *  profiles command
@@ -706,17 +741,6 @@ function command_buddies(action,buddy){
         }
 }
 
-function shutdown(){
-    if(this.exiting) return;
-    this.exiting = true;
-
-    if(Network) Network.shutdown();
-
-    setTimeout(function(){
-       process.exit();
-    },300);
-}
-
 /*
  * import-key command
  */
@@ -746,6 +770,10 @@ function command_import_key(app,profile,id){
     }else{
         console.log("I don't know about this application:",app);
     }
+}
+
+function resolve_home_path(str){
+   return str.replace("~", process.env[process.platform=='win32'?'USERPROFILE':'HOME']);
 }
 
 function do_import_key(filename,profilename,id){
@@ -882,10 +910,6 @@ function command_im_buddies(){
   });
 }
 
-function resolve_home_path(str){
-   return str.replace("~", process.env[process.platform=='win32'?'USERPROFILE':'HOME']);
-}
-
 function openEncryptedFile(filename,password){
     var buf = fs.readFileSync(filename);
     if(!password) return buf;
@@ -893,18 +917,3 @@ function openEncryptedFile(filename,password){
     var output = c.update(buf.toString('binary'),'binary','binary')+c.final('binary');
     return (new Buffer(output,'binary'));
 }
-
-//platform specific paths to private key stores
-var IMAPPS = {
-  'pidgin':{
-    'linux': {keys:'~/.purple/otr.private_key',fingerprints:'~/.purple/otr.fingerprints'},
-    'darwin': {keys:'~/.purple/otr.private_key',fingerprints:'~/.purple/otr.fingerprints'},
-    'win32': {keys:'~/Application Data/.purple/otr.private_key',fingerprints:'~/Application Data/.purple/otr.fingerprints'}
-  },
-  'adium':{
-    'darwin':{keys:'~/Library/Application Support/Adium 2.0/Users/Default/otr.private_key',
-              fingerprints:'~/Library/Application Support/Adium 2.0/Users/Default/otr.fingerprints'}
-  }
-};
-
-main();//process commands and options.
