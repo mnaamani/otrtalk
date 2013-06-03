@@ -38,11 +38,14 @@ var IMAPPS = {
 };
 
 process.title = "otrtalk";
-
 function init_stdin_stderr(){
-    process.__defineGetter__('stderr', function(){
-        return {write:function(){}};
-    });
+    (function(stderr){
+     process.__defineGetter__('stderr', function(){
+        return {write:function(){
+            if(program.stderr) stderr.write.apply(stderr,arguments);
+        }};
+     });
+    })(process.stderr);
 
     if(process.platform!='win32') process.on('SIGINT',function(){
         shutdown();
@@ -50,7 +53,7 @@ function init_stdin_stderr(){
 }
 
 function debug(){
-    if(program.verbose) console.log.apply(null,arguments);
+    if(program.verbose) console.log.apply(console,arguments);
 }
 
 (function(){
@@ -59,6 +62,7 @@ function debug(){
   program
     .version("0.1.12")
     .option("-v, --verbose","show some debug info")
+    .option("-e, --stderr","don't supress stderr (more debug info)")
     .option("-p, --profile [profile]","","")
     .option("-f, --fingerprint [fingerprint]","\n\t\tOTR key fingerprint of buddy to connect with (connect mode only)\n","")
     .option("-s, --secret [secret]","\n\t\tSMP authentication secret (connect mode only)\n","")
