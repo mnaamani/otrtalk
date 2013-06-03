@@ -85,6 +85,14 @@ function main(){
         import_key_wizard(app,profile,id);
     });
 
+  program
+    .command('im-buddies')
+    .description('list authenticated buddies from piding/adium')
+    .action( function(){
+        got_command = true;
+        imapp_fingerprints_list();
+    });
+
   program.parse(process.argv);
   process.stdin.on('end', shutdown );
   if(!got_command) {
@@ -799,7 +807,7 @@ function do_import_key(filename,profilename,id){
     });
 }
 
-function imapp_fingerprints_parse(){
+function imapp_fingerprints_parse(override_app){
     var filename;
     var app;
     var parsed = {
@@ -807,6 +815,7 @@ function imapp_fingerprints_parse(){
     };
     app = program.pidgin ? "pidgin" : app;
     app = program.adium  ? "adium"  : app;
+    app = override_app || app;
 
     if(IMAPPS[app]){
       if(IMAPPS[app][process.platform]){
@@ -840,6 +849,23 @@ function imapp_fingerprints_match(fp){
       });
     }
     return match;
+}
+
+function imapp_fingerprints_list(){
+  ['pidgin','adium'].forEach(function(app){
+    var buddies = imapp_fingerprints_parse(app);
+    if(!buddies.entries.length) return;
+    var Table = require("cli-table");
+    var table = new Table({
+        head:['username','accountname','protocol','fingerprint']
+    });
+    buddies.entries.forEach( function(buddy){
+        var fp = validateFP(buddy.fingerprint);
+        table.push( [buddy.username,buddy.accountname,buddy.protocol,fp] );
+    });
+    console.log(" ==",app,"authenticated buddies ==");
+    console.log(table.toString());
+  });
 }
 
 function resolve_home_path(str){
