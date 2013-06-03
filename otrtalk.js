@@ -307,7 +307,7 @@ function handleAuth(_,callback){
         return;
     }
 
-    debug("[verifying connection]");
+    debug("[authenticated connection]");
     session._on_auth_complete = callback;
     switch( talk.MODE ){
         case 'chat':
@@ -323,9 +323,15 @@ function handleAuth(_,callback){
             console.log("\t"+session.fingerprint());
             program.confirm("\nDo you want to trust this fingerprint [y/n]? ",function(ok){
                 if(!ok){
-                    debug("[rejecting connection]");
+                    console.log("rejecting fingerprint.");
                     session.end();
                 }else{
+                    if(session.ending){
+                        //remote rejected, and closed the session
+                        console.log("session closed, fingerprint not saved.");
+                        return;
+                    }
+                    console.log("accepted fingerprint.");
                     session.go_chat();
                 }
             });
@@ -343,7 +349,10 @@ function startChat(talk,session){
    talk.found_buddy = true;
    if(session._on_auth_complete) session._on_auth_complete();
    delete session._on_auth_complete;
-   console.log('[connected]\nbuddy:',session.fingerprint());
+   console.log('-----------------------------------------------');
+   console.log('connected to:',session.remote());
+   console.log('buddy fingerprint:',session.fingerprint());
+   console.log('-----------------------------------------------');
    Chat.attach(talk,session);
 }
 
