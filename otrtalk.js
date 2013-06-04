@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+var OTRTALK_VERSION = "0.1.12"
+
 var async = require("async");
 var program = require("commander");
 var fs = require("fs");
@@ -60,7 +62,7 @@ function debug(){
   var got_command = false;
   init_stdin_stderr();
   program
-    .version("0.1.12")
+    .version(OTRTALK_VERSION)
     .option("-v, --verbose","show some debug info")
     .option("-e, --stderr","don't supress stderr (more debug info)")
     .option("-p, --profile [profile]","","")
