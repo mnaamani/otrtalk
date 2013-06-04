@@ -69,7 +69,9 @@ function debug(){
     .option("-o, --otr [otr4-em|otr3]","\n\t\tOTR module to use for profile\n","otr4-em")//only takes effect when creating a profile
     .option("--pidgin","\n\t\tcheck pidgin buddylist for known fingerprints (connect mode only)\n","")
     .option("--adium","\n\t\tcheck adium buddylist for known fingerprints (connect mode only)\n","")
-    .option("--lan","\n\t\tbroadcast on the LAN, don't use telehash p2p discovery (experimental feature)\n");
+    .option("--lan","\n\t\tseed from telehash switches on the LAN (experimental feature)\n")
+    .option("--host","\n\t\tact as a telehash seed for the LAN (experimental feature)\n")    
+    .option("--broadcast","\n\t\tbroadcast on the LAN, don't use telehash p2p discovery (experimental feature)\n");
     
   program
   .command('connect [buddy]')
@@ -202,13 +204,18 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
                                 Talk.MODE = talk_mode = 'connect';
                             }
                         }
-                        if(program.lan){
-                            debug("-- <Network mode> LAN Broadcast");
-                            Network = require("./lib/net-broadcast");
+                        
+                        if(program.broadcast){
+                                debug("-- <Network mode> LAN Broadcast");
+                                Network = require("./lib/net-broadcast");
+                        }else if(program.lan){
+                                debug("-- <Network mode> Telehash <local>");
+                                Network = require("./lib/net-local-telehash");
                         }else{
-                            debug("-- <Network mode> Telehash");
-                            Network = require("./lib/net-telehash");
+                                debug("-- <Network mode> Telehash <global>");
+                                Network = require("./lib/net-telehash");
                         }
+
                         //esnure fingerprint if entered as option is correctly formatted
                         ensureFingerprint(program.fingerprint,function(valid_fingerprint){
                           if(talk_mode == 'connect'){
@@ -260,7 +267,7 @@ function startTalking(talk){
             }
             incomingConnection(talk,peer);
         });
-    });
+    },program.host?42424:undefined);
 }
 
 function incomingConnection(talk,peer){
