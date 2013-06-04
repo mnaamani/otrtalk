@@ -1,5 +1,18 @@
 #!/usr/bin/env node
-var OTRTALK_VERSION = "0.1.12"
+var OTRTALK_VERSION = "0.1.12";
+/*
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of version 2 of the GNU General Public License as published by
+    the Free Software Foundation.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    
+    You should have received a copy of the GNU General Public License
+    along with this program. If not, see http://www.gnu.org/licenses/.
+*/
 
 var async = require("async");
 var program = require("commander");
@@ -62,7 +75,7 @@ function debug(){
   var got_command = false;
   init_stdin_stderr();
   program
-    .version(OTRTALK_VERSION)
+    .version("otrtak "+OTRTALK_VERSION+"\n(c) 2013 Mokhtar Naamani <mokhtar.naamani@gmail.com>\n\nThis program is free software; you can redistribute it and/or modify it\nunder the terms of version 2 of the GNU General Public License as published by\nthe Free Software Foundation.")
     .option("-v, --verbose","show some debug info")
     .option("-e, --stderr","don't supress stderr (more debug info)")
     .option("-p, --profile [profile]","","")
