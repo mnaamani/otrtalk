@@ -1,6 +1,6 @@
 {
     "name":     "otrtalk",
-    "version":  "0.1.12",
+    "version":  "0.1.13",
     "main": "otrtalk.js",
     "bin" : { 
         "otrtalk" : "./otrtalk.js"
