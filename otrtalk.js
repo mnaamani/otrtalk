@@ -136,6 +136,14 @@ function debug(){
         command_im_buddies();
     });
 
+  program
+    .command('update')
+    .description('check if we are running latest version')
+    .action( function(){
+        got_command = true;
+        command_update_check();
+    });
+
   program.parse(process.argv);
   process.stdin.on('end', shutdown );
   if(!got_command) {
@@ -951,4 +959,27 @@ function openEncryptedFile(filename,password){
     var c = crypto.createDecipher('aes256', password);
     var output = c.update(buf.toString('binary'),'binary','binary')+c.final('binary');
     return (new Buffer(output,'binary'));
+}
+
+function command_update_check(){
+    var https = require('https');
+    https.get("https://raw.github.com/mnaamani/node-otr-talk/master/package.json", function(res) {
+      res.on('data', function(d) {
+        var package = JSON.parse(d.toString());
+        try{
+        if(package.version === OTRTALK_VERSION){
+            console.log("You have the latest version:", OTRTALK_VERSION);
+        }else{
+            console.log("installed version:",OTRTALK_VERSION);
+            console.log("new version:",package.version,"is available to download.");
+
+            console.log("Use the npm package manager to update: npm -g update otrtalk");
+        }
+        }catch(E){
+            console.log("unable to check for updated version.");
+        }
+      });
+    }).on('error', function(e) {
+      console.log("github.com is unreachable.");
+    });    
 }
