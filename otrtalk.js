@@ -24,18 +24,21 @@ var SessionManager = require("./lib/sessions");
 var Chat = require("./lib/chat");
 var fs_existsSync = fs.existsSync || path.existsSync;
 var crypto = require("crypto");
+var os = require("os");
 
 var EXITING = false;
 
 var otr;
 var otr_modules = {
     "otr3":"otr3",
-    "otr4-em":"otr4-em"
+    "otr4-em":"otr4-em",
+    "otr4":"otr4"
 }
 function OTR_INSTANCE(choice){
     if(otr) return otr;//only one global instance
     var otr_mod =  choice ? otr_modules[choice] : 'otr4-em';
     otr = otr_mod ? require(otr_mod) : undefined;
+    console.error("loaded otr version:",otr.version());
     return otr;
 }
 
@@ -81,7 +84,7 @@ function debug(){
     .option("-p, --profile [profile]","","")
     .option("-f, --fingerprint [fingerprint]","\n\t\tOTR key fingerprint of buddy to connect with (connect mode only)\n","")
     .option("-s, --secret [secret]","\n\t\tSMP authentication secret (connect mode only)\n","")
-    .option("-o, --otr [otr4-em|otr3]","\n\t\tOTR module to use for profile\n","otr4-em")//only takes effect when creating a profile
+    .option("-o, --otr [otr4-em|otr3|otr4]","\n\t\tOTR module to use for profile\n","otr4-em")
     .option("--pidgin","\n\t\tcheck pidgin buddylist for known fingerprints (connect mode only)\n","")
     .option("--adium","\n\t\tcheck adium buddylist for known fingerprints (connect mode only)\n","")
     .option("--lan","\n\t\tseed from telehash switches on the LAN (experimental feature)\n")
@@ -828,16 +831,28 @@ function do_import_key(filename,profilename,id){
     var source = {};
     var key;
     var profile;
-    
+    var import_otr = "";    
     //check if profile already exists - don't overwrite!
     if(pm.profile(profilename)){
       console.log("Profile '"+profilename+"' already exists. Please specify a different profile to import into.");
       return;
     }
-    otr = require("otr4-em");
-    VFS = otr.VFS();
+
+    if( !(program.otr == "otr4-em" || program.otr == "otr4")){
+        console.log("error: Only supported otr modules for import are otr4-em and otr4");
+        return;
+    }
+    try{
+        otr = require(program.otr);
+    }catch(e){
+        console.log("fatal error loading otr module:",program.otr,e);
+        return;
+    }
+
+    VFS = otr.VFS ? otr.VFS() : undefined;
+
     console.log("checking application files..");
-    source.files = new UserFiles({keys:filename,fingerprints:"/tmp/tmp.fp",instags:'/tmp/tmp.tag'},null,VFS);
+    source.files = new UserFiles({keys:filename,fingerprints:path.join(os.tmpdir(),"tmp.fp"),instags:path.join(os.tmpdir(),"tmp.tag")},null,VFS);
     source.user = new otr.User(source.files);
 
     console.log("Select an account to import:");
@@ -847,7 +862,7 @@ function do_import_key(filename,profilename,id){
        list.push(account.protocol+":"+account.accountname);
     });
     program.choose(list,function(i){
-        profile = pm.add(profilename,{id:id,accountname:accounts[i].accountname,protocol:accounts[i].protocol,otr:"otr4-em"},false,true);
+        profile = pm.add(profilename,{id:id,accountname:accounts[i].accountname,protocol:accounts[i].protocol,otr:import_otr},false,true);
         if(!profile){
             console.log("Error adding new profile.");
             return;
