@@ -21,7 +21,7 @@
         "async":"*",
         "commander":">=1.1.1",
         "get-telehash":">=0.0.13",
-        "otr4-em":">=0.0.13",
+        "otr4-em":">=0.0.15",
         "ansi":">=0.1.2",
         "keypress":">=0.1.0",
         "cli-table":"*"
