@@ -195,15 +195,16 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
              process.exit();
             }
 
-            //access keystore - prepare new one if not exists.
+            //access keystore - account and must already have been created
             accessKeyStore(Talk.profile,Talk.buddy,(otr.VFS?otr.VFS():undefined),true,function(files){
                 if(!files) process.exit();
                 Talk.files = files;
                 Talk.user = new otr.User(Talk.files);
-                ensureAccount(Talk.user,Talk.accountname,Talk.protocol,function(result,err){
-                    if(err) console.log("Error: Getting key.",err.message);
-                    if(!result || result=='not-found' || err ) process.exit();
-                    if(result=='new') Talk.files.save();//save newly created key.
+                ensureAccount(Talk.user,Talk.accountname,Talk.protocol,false,function(result){
+                    if(result == 'not-found'){
+                        console.log("Error: Accessing Account.");
+                        process.exit();
+                    }
                     
                     ensureInstag(Talk.user,Talk.accountname,Talk.protocol,function(result,err){
                         if(result=='error'){
@@ -591,21 +592,21 @@ function openFingerprintsStore(profile,password,next){
   next(buddies);
 }
 
-function ensureAccount(user,accountname,protocol,next){
+function ensureAccount(user,accountname,protocol,generate,next){
     if(!user.fingerprint( accountname, protocol)){
-       program.confirm("Generate your OTR key now [y/n]? ",function(ok){
-          if(ok){
-            user.generateKey(accountname,protocol,function(err){
+       if(generate){
+           console.log("Generating your DSA key...");
+           user.generateKey(accountname,protocol,function(err){
               if(err){
                 next('error',err);
               }else{
                 next('new');
               }
-            });
-          }else {
-            next('not-found');
-          }
-       });
+           });
+      }else{
+        //account not found..
+        next('not-found');
+      }
     }else next('found');
 }
 
@@ -679,7 +680,8 @@ function command_profiles(action, profilename, accountname){
                         accessKeyStore(profile,undefined,(otr.VFS?otr.VFS():undefined),true,function(files){
                             if(files){
                               var user = new otr.User( files );
-                              ensureAccount(user,profile.accountname,profile.protocol,function(result,err){
+                              //create the account and Key
+                              ensureAccount(user,profile.accountname,profile.protocol,true,function(result,err){
                                 if(err || result == 'not-found') {
                                     if(err) console.log("Error generating key.",err.message);
                                     process.exit();
