@@ -973,9 +973,14 @@ function command_im_buddies(){
 function openEncryptedFile(filename,password){
     var buf = fs.readFileSync(filename);
     if(!password) return buf;
-    var c = crypto.createDecipher('aes256', password);
-    var output = c.update(buf.toString('binary'),'binary','binary')+c.final('binary');
-    return (new Buffer(output,'binary'));
+    try{
+        var c = crypto.createDecipher('aes256', password);
+        var output = c.update(buf.toString('binary'),'binary','binary')+c.final('binary');
+        return (new Buffer(output,'binary'));
+    }catch(e){
+        console.log("Error accessing encrypted store:",e.message);
+        process.exit();
+    }
 }
 
 function command_update_check(){
