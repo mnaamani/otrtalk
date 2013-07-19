@@ -19,12 +19,12 @@
     },
     "dependencies":{
         "async":"*",
-        "commander":">=1.1.1",
-        "get-telehash":">=0.0.13",
-        "otr4-em":">=0.0.15",
-        "ansi":">=0.1.2",
-        "keypress":">=0.1.0",
-        "cli-table":"*"
+        "commander":"=1.1.1",
+        "get-telehash":"=0.0.13",
+        "otr4-em":"=0.0.15",
+        "ansi":"=0.2.0",
+        "keypress":"=0.2.1",
+        "cli-table":"=0.2.0"
     },
     "license": "GPLv2"
 }
