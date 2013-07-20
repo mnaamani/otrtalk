@@ -430,10 +430,7 @@ function getProfile( pm, name, next ){
           console.log("Enter the otrtalk id for this profile. This is a public name that you give out to your buddies.");
           program.prompt("  otrtalk id: ",function(accountname){
               if(!accountname) {next();return;}
-              next(pm.add(name,{
-                accountname:accountname,
-                otr:program.otr
-              }));
+              command_profiles('add', name, accountname, next);
             });
         }else next();
       });
@@ -460,10 +457,7 @@ function getProfile( pm, name, next ){
                 console.log("Enter an otrtalk id for this profile.\nThis is a public name that you give out to your buddies.");
                 program.prompt("  otrtalk id: ",function(accountname){
                     if(!accountname) {next();return;}
-                    next(pm.add(name,{
-                        accountname:accountname,
-                        otr:program.otr
-                    }));
+                    command_profiles('add', name, accountname, next);
                 });
             });
         }
@@ -628,7 +622,7 @@ function ensureInstag(user,accountname,protocol,next){
 /*
  *  profiles command
  */
-function command_profiles(action, profilename, accountname){
+function command_profiles(action, profilename, accountname,next){
     var pm = require("./lib/profiles");  
     var profile;
     profilename = profilename || program.profile;
@@ -666,10 +660,10 @@ function command_profiles(action, profilename, accountname){
                 });
                 break;
             case 'add':
-                if(!profilename) {console.log("Profile not specified.");return;}
+                if(!profilename) {console.log("Profile not specified.");if(next)next();return;}
                 profile = pm.profile(profilename);
                 if(!profile){
-                    if(!accountname){ console.log("No otrtalk id specified"); break;}
+                    if(!accountname){ console.log("No otrtalk id specified"); if(next)next();break;}
                     //create profile with default settings..
                     profile = pm.add(profilename,{
                      accountname:accountname,
@@ -699,15 +693,23 @@ function command_profiles(action, profilename, accountname){
                                         table.push([account.accountname,account.protocol,account.fingerprint]);
                                     });
                                     console.log(table.toString());
-                                    process.exit();
+                                    if(next) next(profile); else process.exit();
                                 }
                               });
-                            }else process.exit();
+                            }else{
+                                 if(next) next(); else process.exit();
+                            }
                         });
 
-                    }else console.log("Failed to create profile.");
+                    }else{
+                        console.log("Failed to create profile.");
+                        if(next) next();
+                    }
 
-                }else console.log(profilename,"Profile already exists!");
+                }else {
+                    console.log(profilename,"Profile already exists!");
+                    if(next) next();
+                }
                 break;
             case 'remove':
                 if(!pm.profiles() || !pm.profiles().length) return console.log("No profiles found.");
