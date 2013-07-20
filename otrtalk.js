@@ -79,17 +79,17 @@ function debug(){
   init_stdin_stderr();
   program
     .version("otrtak "+OTRTALK_VERSION+"\n(c) 2013 Mokhtar Naamani <mokhtar.naamani@gmail.com>\n\nThis program is free software; you can redistribute it and/or modify it\nunder the terms of version 2 of the GNU General Public License as published by\nthe Free Software Foundation.")
-    .option("-v, --verbose","show some debug info")
-    .option("-e, --stderr","don't supress stderr (more debug info)")
-    .option("-p, --profile [profile]","","")
-    .option("-f, --fingerprint [fingerprint]","\n\t\tOTR key fingerprint of buddy to connect with (connect mode only)\n","")
-    .option("-s, --secret [secret]","\n\t\tSMP authentication secret (connect mode only)\n","")
-    .option("-o, --otr [otr4-em|otr3|otr4]","\n\t\tOTR module to use for profile\n","otr4-em")
-    .option("--pidgin","\n\t\tcheck pidgin buddylist for known fingerprints (connect mode only)\n","")
-    .option("--adium","\n\t\tcheck adium buddylist for known fingerprints (connect mode only)\n","")
-    .option("--lan","\n\t\tseed from telehash switches on the LAN (experimental feature)\n")
-    .option("--host","\n\t\tact as a telehash seed for the LAN (experimental feature)\n")    
-    .option("--broadcast","\n\t\tbroadcast on the LAN, don't use telehash p2p discovery (experimental feature)\n");
+    .option("-v, --verbose","verbose debug info")
+    .option("-e, --stderr","more verbose")
+    .option("-p, --profile [PROFILE]","use specified profile","")
+    .option("-f, --fingerprint [FINGERPRINT]","buddy key fingerprint (connect mode)","")
+    .option("-s, --secret [SECRET]","SMP authentication secret (connect mode)","")
+    .option("-o, --otr [module]","otr4-em, otr4, otr3 (for new profiles) default:otr4-em","otr4-em")
+    .option("--pidgin","check pidgin buddylist for known fingerprints (connect mode)","")
+    .option("--adium","check adium buddylist for known fingerprints (connect mode)","")
+    .option("--lan","seed from local telehash switches on the LAN")
+    .option("--host","act as a telehash seed for the LAN")    
+    .option("--broadcast","do broadcast LAN discovery");
     
   program
   .command('connect [buddy]')
@@ -117,7 +117,7 @@ function debug(){
 
   program
     .command('buddies [list|forget] [buddy]')
-    .description('manage otrtalk buddies')
+    .description('manage buddies')
     .action( function(){
         got_command = true;
         command_buddies.apply(this,arguments);
@@ -125,7 +125,7 @@ function debug(){
 
   program
     .command('import-key [pidgin|adium] [profile] [otrtalk-id]')
-    .description('import a key from pidgin/adium into new profile')
+    .description('import a key from pidgin/adium into a new profile')
     .action( function(app,profile,id){
         got_command = true;
         command_import_key(app,profile,id);
@@ -133,7 +133,7 @@ function debug(){
 
   program
     .command('im-buddies')
-    .description('list authenticated buddies from piding/adium')
+    .description('list pidgin and/or adium trusted buddies')
     .action( function(){
         got_command = true;
         command_im_buddies();
@@ -235,7 +235,7 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
                         if(program.broadcast){
                                 debug("-- <Network mode> LAN Broadcast");
                                 Network = require("./lib/net-broadcast");
-                        }else if(program.lan){
+                        }else if(program.lan || program.host){
                                 debug("-- <Network mode> Telehash <local>");
                                 Network = require("./lib/net-local-telehash");
                         }else{
