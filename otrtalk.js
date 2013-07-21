@@ -234,13 +234,13 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
                         
                         if(program.broadcast){
                                 debug("-- <Network mode> LAN Broadcast");
-                                Network = require("./lib/net-broadcast");
+                                Network = require("./lib/discovery/broadcast");
                         }else if(program.lan || program.host){
                                 debug("-- <Network mode> Telehash <local>");
-                                Network = require("./lib/net-local-telehash");
+                                Network = require("./lib/discovery/local-telehash");
                         }else{
                                 debug("-- <Network mode> Telehash <global>");
-                                Network = require("./lib/net-telehash");
+                                Network = require("./lib/discovery/telehash");
                         }
 
                         //esnure fingerprint if entered as option is correctly formatted
