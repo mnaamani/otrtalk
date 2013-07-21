@@ -1,8 +1,8 @@
 ##OTRTALK
 **p2p off-the-record chat tool, built using TEO network stack**
-- [T|eleHash](http://telehash.org): a real-time and fully distributed p2p application/services discovery protocol.
-- [E|Net](http://enet.bespin.org/Features.html): robust network communication layer on top of UDP.
-- [O|TR](http://www.cypherpunks.ca/otr/): off-the-record messaging (encryption, authentication, deniability,forward secrecy)
+- [T|eleHash](https://github.com/mnaamani/node-telehash): a real-time and fully distributed p2p application/services discovery protocol.
+- [E|Net](https://github.com/mnaamani/enet-npm): robust network communication layer on top of UDP.
+- [O|TR](https://github.com/mnaamani/otr4-em): off-the-record messaging (encryption, authentication, deniability,forward secrecy)
 
 **otrtalk is considered experimental, alpha, proof of concept -- for testing purposes only!**
 
@@ -28,30 +28,48 @@ otrtalk doesn't depend on servers or datacenters. The p2p network at the moment 
 
     npm -g install otrtalk
     
-### Getting started
+### Getting Started
 
-Setup your OTR public key. You can choose to import an existing DSA key from pidgin or adium accounts, or generate a new one.
-To generate a new key, create a new profile *Profile_Name* and assign it an otrtalk-id *me@otr-talk*:
+Lets say Alice wishes to chat with Bob.
 
-    otrtalk profiles add Profile_Name me@otr-talk
+On her system Alice will create a new profile named "Alice" and assign it an otrtalk-id "@alice":
 
-To import a key from pidgin, into a new profile:
+    alice:~$ otrtalk profiles add Alice @alice
 
-    otrtalk import-key pidgin Profile_Name me@otr-talk
+A new OTR key will be generated for her profile.
 
-To connect to a buddy you should know their otrtalk-id and public key fingerprint:
+Bob similary creates a profile "Bob" with otrtalk-id "@bob" and generates a new OTR key on his system:
 
-    otrtalk connect buddy_alias --fingerprint "517720E5 BE9A020E 0F8F551A A5D0C18D 09F19E09"
+    bob:~$ otrtalk profiles add Bob @bob
 
-You will be prompted to add buddy_alias to your profile buddylist and enter their corresponding otrtalk-id.
-You will also be prompted for an SMP authentication secret which you and your buddy must agree to for the new trust connection to be established.
+Alice can now attempt to connect with Bob giving him a buddy alias BOB.
 
-Your buddy should follow the same procedure. When you are both online a p2p connection will be established, followed by a prompt to accept each other's
-fingerprints and a secure chat begins.
+    alice:~$ otrtalk connect BOB --profile Alice
 
-In future you only need to use the chat command to chat with your buddy:
+She will be prompted to enter his otrtalk-id. She will also be prompted for an SMP authentication secret.
+This is a one-time secret agreed between Alice and Bob for the purpose of establishing a new trust. Bob issues a similar command:
 
-    otrtalk chat buddy_alias
+    bob:~$ otrtalk connect ALICE --profile Bob
+
+Where ALICE is Bob's buddy alias for Alice. He will also be prompted to enter her otrtalk-id and the SMP authentication secret.
+Network discovery will occur and a connection will be established between Alice and Bob, each will be presented with the other's
+key fingerprint to accept. When both parties accept the fingerprint a chat prompt is presented to enter messages:
+
+    [ connect mode ] contacting: BOB ..
+    [authentication success]
+    You have connected to someone who claims to be BOB
+    They know the authentication secret.
+    Their public key fingerprint:
+
+        90D8EA21 4324B1DB 8CD1152D 410514ED 95425C39
+
+    Do you want to trust this fingerprint [y/n]? y
+    accepted fingerprint.
+    -----------------------------------------------
+    connected to: 178.79.135.146:34467
+    buddy fingerprint: 90D8EA21 4324B1DB 8CD1152D 410514ED 95425C39
+    -----------------------------------------------
+    otrtalk: 
 
 
 ### Otrtalk Profiles
@@ -104,21 +122,32 @@ Prior to starting a connect session, exchange your otrtalk-id and public key fin
 This is a one-time secret which will be used to to perform a automated Socialist Millionair's Protocol (SMP) authentication
 as part of the network discovery protocol to find our buddy in the p2p network.
 
-Most reliable - specify a known buddy's fingerprint (from existing instant messaging app pidgin or adium)
+There are several options to use when connecting and establishing trust.
+If you and your buddy use OTR with pidgin and have imported your keys to an otrtalk profile this is the best way to connect:
 
     otrtalk connect bob --fingerprint "517720E5 BE9A020E 0F8F551A A5D0C18D 09F19E09" --pidgin
 
-For connecting to a new buddy not in our pidgin or adium buddy lists:
+Where "517720E5 BE9A020E 0F8F551A A5D0C18D 09F19E09" is bob's fingerprint.
+The --pidgin or --adium option will display the accountname from pidgin or adium on a fingerprint match.
+
+To list all your buddies fingerprints from adium/pidgin:
+
+    otrtalk im-buddies
+
+For connecting to a new buddy with whom we have exchanged fingerprints:
 
     otrtalk connect bob --fingerprint "517720E5 BE9A020E 0F8F551A A5D0C18D 09F19E09"
 
-Works but not recommended, would have to do SMP authentication with every connection and manually verify each fingerprint:
+Finally the simplest way although not the recommended way:
 
     otrtalk connect bob
 
+Including the --fingerprint option is recommended (make sure to include the quotes) because it reduces
+the number of sessions and authentication attemps made with peers during the discovery process.
+
 Once a session successfully completes SMP authentication, the fingerprint of the public
 key is presented. At this point we **must** verify that it matches the one we exchanged securely with our buddy.
-After successfull verification the fingerprint is saved and a secure chat session is started.
+After successfull verification on both sides, the fingerprint is saved and a secure chat session is started.
 
 
 **Chat Mode**
@@ -130,19 +159,15 @@ Use chat mode to connect to a buddy with which a trust has already been establis
 In this mode otrtalk will only establish an secure chat session with a peer who's public key fingperprint matches the one we have
 on file in the fingerprints store.
 
+When a connection is established typing messages at the prompt followed by enter will send he message.
+Commands are issued with a forward slash:
 
-**Secure Chat Session**
-Type a message at the otrtalk: prompt
-
-    otrtalk: type a message here and press enter to send it.
-
-You can also issues commands..
-
-    otrtalk: /help
+     otrtalk: /help
     
 available commands:
 
     /info   - session information
     /auth   - start or respond to in session SMP authentication
     /clear  - clear the messages on the screen
-    /exit   - exit the chat
+    
+To end the chat press ctrl-D 
