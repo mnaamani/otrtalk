@@ -78,7 +78,12 @@ function debug(){
   var got_command = false;
   init_stdin_stderr();
   program
-    .version("otrtak "+OTRTALK_VERSION+"\n(c) 2013 Mokhtar Naamani <mokhtar.naamani@gmail.com>\n\nThis program is free software; you can redistribute it and/or modify it\nunder the terms of version 2 of the GNU General Public License as published by\nthe Free Software Foundation.")
+    .version("otrtak "+OTRTALK_VERSION+"\n(c) 2013 Mokhtar Naamani <mokhtar.naamani@gmail.com>\n\n"+
+             "This program is free software; you can redistribute it and/or modify it\n"+
+             "under the terms of version 2 of the GNU General Public License as published by\n"+
+             "the Free Software Foundation.\n\n"+
+             "report bugs: https://github.com/mnaamani/node-otr-talk/issues\n"+
+             "documentation: https://github.com/mnaamani/node-otr-talk/wiki\n")
     .option("-v, --verbose","verbose debug info")
     .option("-e, --stderr","more verbose")
     .option("-p, --profile <PROFILE>","use specified profile","")
