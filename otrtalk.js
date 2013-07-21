@@ -15,7 +15,7 @@ var OTRTALK_VERSION = "0.1.17";
 */
 
 var async = require("async");
-var program = require("commander");
+var program = require("./lib/commander");
 var fs = require("fs");
 var path = require("path");
 var assert = require("assert");
@@ -81,10 +81,10 @@ function debug(){
     .version("otrtak "+OTRTALK_VERSION+"\n(c) 2013 Mokhtar Naamani <mokhtar.naamani@gmail.com>\n\nThis program is free software; you can redistribute it and/or modify it\nunder the terms of version 2 of the GNU General Public License as published by\nthe Free Software Foundation.")
     .option("-v, --verbose","verbose debug info")
     .option("-e, --stderr","more verbose")
-    .option("-p, --profile [PROFILE]","use specified profile","")
-    .option("-f, --fingerprint [FINGERPRINT]","buddy key fingerprint (connect mode)","")
-    .option("-s, --secret [SECRET]","SMP authentication secret (connect mode)","")
-    .option("-o, --otr [module]","otr4-em, otr4, otr3 (for new profiles) default:otr4-em","otr4-em")
+    .option("-p, --profile <PROFILE>","use specified profile","")
+    .option("-f, --fingerprint <FINGERPRINT>","buddy key fingerprint (connect mode)","")
+    .option("-s, --secret <SECRET>","SMP authentication secret (connect mode)","")
+    .option("-o, --otr <module>","otr4-em, otr4, otr3 (for new profiles) default:otr4-em","otr4-em")
     .option("--pidgin","check pidgin buddylist for known fingerprints (connect mode)","")
     .option("--adium","check adium buddylist for known fingerprints (connect mode)","")
     .option("--lan","seed from local telehash switches on the LAN")
@@ -263,7 +263,7 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
                           if(talk_mode =='connect' && !program.secret){
                             console.log("When establishing a new trust with a buddy you must provide a shared secret.");
                             console.log("This will be used by SMP authentication during connection establishment.");
-                            program.password("Enter SMP secret: ","*",function(secret){
+                            program.password("Enter SMP secret: ","",function(secret){
                                Talk.secret = secret;
                                startTalking(Talk);
                             });

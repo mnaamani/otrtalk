@@ -19,7 +19,6 @@
     },
     "dependencies":{
         "async":"*",
-        "commander":"=1.1.1",
         "get-telehash":"=0.0.13",
         "otr4-em":"=0.0.16",
         "ansi":"=0.2.0",
