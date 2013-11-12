@@ -92,6 +92,7 @@ function debug(){
     .option("-f, --fingerprint <FINGERPRINT>","buddy key fingerprint (connect mode)","")
     .option("-s, --secret <SECRET>","SMP authentication secret (connect mode)","")
     .option("-o, --otr <module>","otr4-em, otr4, otr3 (for new profiles) default:otr4-em","otr4-em")
+    .option("-i, --interface <interface>","optional network interface to use for communication")
     .option("--pidgin","check pidgin buddylist for known fingerprints (connect mode)","")
     .option("--adium","check adium buddylist for known fingerprints (connect mode)","")
     .option("--lan","seed from local telehash switches on the LAN")
@@ -292,7 +293,7 @@ function startTalking(talk){
     talk.link = new Network.Link(talk.id || talk.accountname, talk.buddyID);
 
     debug("initiating network...");
-    Network.init(function(){
+    Network.init(program.interface, function(){
         console.log("[",talk.MODE,"mode ] contacting:",talk.buddy,"..");
         talk.link.connect(function( peer ){
             if(Chat.ActiveSession() || talk.found_buddy ){
