@@ -19,8 +19,8 @@
     },
     "dependencies":{
         "async":"*",
-        "get-telehash":"=0.0.14",
-        "otr4-em":"=0.0.16",
+        "get-telehash":"=0.1.0",
+        "otr4-em":"=0.0.18",
         "ansi":"=0.2.0",
         "keypress":"=0.2.1",
         "cli-table":"=0.2.0"
