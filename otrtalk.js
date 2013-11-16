@@ -124,7 +124,7 @@ function debug(){
      });
 
   program
-    .command('buddies [list|forget] [buddy]')
+    .command('buddies [list|remove] [buddy]')
     .description('manage buddies')
     .action( function(){
         got_command = true;
@@ -750,7 +750,7 @@ function command_buddies(action,buddy){
     profilename = program.profile;
     if(!action) action = 'list';
         switch(action){
-            case 'forget':
+            case 'remove':
                 if(!buddy){ console.log("Buddy not specified.");return;}
                 if(!pm.profiles() || !pm.profiles().length) return console.log("No profiles found.");
                 if(!profilename){
@@ -766,7 +766,7 @@ function command_buddies(action,buddy){
                            fs.unlink(profile.buddyFingerprints(buddy));
                        }
                        profile.removeBuddy(buddy);
-                       console.log("deleted buddy:",buddy);
+                       console.log("removed buddy:",buddy);
                        process.exit();
                    });
                 }else console.log("Buddy not found.");
