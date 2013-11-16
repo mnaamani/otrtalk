@@ -597,7 +597,7 @@ function openFingerprintsStore(profile,password,next){
 function ensureAccount(user,accountname,protocol,generate,next){
     if(!user.fingerprint( accountname, protocol)){
        if(generate){
-           console.log("Generating your DSA key...");
+           console.log("Generating your OTR key...");
            user.generateKey(accountname,protocol,function(err){
               if(err){
                 next('error',err);
