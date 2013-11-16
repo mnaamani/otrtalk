@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-var OTRTALK_VERSION = "0.1.18";
+var OTRTALK_VERSION = "0.1.19";
 /*
     This program is free software; you can redistribute it and/or modify
     it under the terms of version 2 of the GNU General Public License as published by
@@ -12,6 +12,14 @@ var OTRTALK_VERSION = "0.1.18";
     
     You should have received a copy of the GNU General Public License
     along with this program. If not, see http://www.gnu.org/licenses/.
+
+    The Off-the-Record Messaging library is
+    Copyright (C) 2004-2012  Ian Goldberg, Rob Smits, Chris Alexander,
+                      Willy Lew, Lisa Du, Nikita Borisov
+                 <otr@cypherpunks.ca>
+    https://otr.cypherpunks.ca/
+
+    ENet Networking Library is Copyright (c) 2002-2013 Lee Salzman
 */
 
 var async = require("async");
@@ -83,7 +91,13 @@ function debug(){
     .version("otrtak "+OTRTALK_VERSION+"\nCopyright (C) 2013 Mokhtar Naamani <mokhtar.naamani@gmail.com>\n"+
              "This program is free software; you can redistribute it and/or modify it\n"+
              "under the terms of version 2 of the GNU General Public License as published by\n"+
-             "the Free Software Foundation.\n\n"+
+             "the Free Software Foundation.\n"+
+             "The Off-the-Record Messaging library is\n"+
+             " Copyright (C) 2004-2012  Ian Goldberg, Rob Smits, Chris Alexander,\n"+
+             "         Willy Lew, Lisa Du, Nikita Borisov\n"+
+             "    <otr@cypherpunks.ca> https://otr.cypherpunks.ca/\n"+
+             "\n"+
+             "The ENet Networking Library is Copyright (c) 2002-2013 Lee Salzman\n\n"+
              "Report bugs: <https://github.com/mnaamani/node-otr-talk/issues>\n"+
              "Documentation: <https://github.com/mnaamani/node-otr-talk/wiki>")
     .option("-v, --verbose","verbose debug info")
