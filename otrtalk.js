@@ -1009,7 +1009,7 @@ function openEncryptedFile(filename,password){
 
 function command_update_check(){
     var https = require('https');
-    https.get("https://raw.github.com/mnaamani/node-otr-talk/master/package.json", function(res) {
+    https.get("https://raw.githubusercontent.com/mnaamani/node-otr-talk/master/package.json", function(res) {
       res.on('data', function(d) {
         var package = JSON.parse(d.toString());
         try{
