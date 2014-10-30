@@ -14,3 +14,4 @@
 * add TURN server support, TLS for access from behind a symmetric NAT or to go over TOR network.
 
 * Web UI - launch a browser and communicate to local otrtalk process with websockets?
+  or use node-webkit
