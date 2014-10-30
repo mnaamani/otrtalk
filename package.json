@@ -2,7 +2,7 @@
     "name":     "otrtalk",
     "version":  "0.1.19",
     "main": "otrtalk.js",
-    "bin" : { 
+    "bin" : {
         "otrtalk" : "./otrtalk.js"
     },
     "description": "distributed p2p off-the-record two-party chat",
@@ -19,11 +19,12 @@
     },
     "dependencies":{
         "async":"*",
-        "get-telehash":"=0.1.0",
-        "otr4-em":"=0.0.18",
+        "get-telehash":"=0.1.2",
+        "otr4-em":"=0.0.20",
         "ansi":"=0.2.0",
         "keypress":"=0.2.1",
-        "cli-table":"=0.2.0"
+        "cli-table":"=0.2.0",
+        "underscore":"*"
     },
     "license": "GPLv2"
 }
