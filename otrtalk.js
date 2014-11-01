@@ -9,7 +9,7 @@ var OTRTALK_VERSION = "0.1.20";
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-    
+
     You should have received a copy of the GNU General Public License
     along with this program. If not, see http://www.gnu.org/licenses/.
 
@@ -33,22 +33,33 @@ var Chat = require("./lib/chat");
 var fs_existsSync = fs.existsSync || path.existsSync;
 var crypto = require("crypto");
 var os = require("os");
+var _ = require("underscore");
 
-var EXITING = false;
+var load_otr = (function(){
+  var _instance;
+  var modules = ['otr3','otr4-em','otr4'];
 
-var otr;
-var otr_modules = {
-    "otr3":"otr3",
-    "otr4-em":"otr4-em",
-    "otr4":"otr4"
-}
-function OTR_INSTANCE(choice){
-    if(otr) return otr;//only one global instance
-    var otr_mod =  choice ? otr_modules[choice] : 'otr4-em';
-    otr = otr_mod ? require(otr_mod) : undefined;
-    console.error("loaded otr version:",otr.version());
-    return otr;
-}
+  return (function (choice){
+    if(_instance){
+      throw('you can only load one instance of otr module!');
+    }
+    if(choice && _.contains(modules, choice) == false){
+      console.log("invalid otr module:",choice);
+      process.exit();
+    }
+    try{
+      var mod = _.contains(modules, choice) ? choice : 'otr4-em';
+      console.error("loading module:",mod);
+      _instance =  require( mod );
+      console.error("using otr version:", _instance.version());
+    } catch (e) {
+      console.log("unable to load otr module:",choice,e.code);
+      process.exit();
+      return undefined;
+    }
+    return _instance;
+  })
+})();
 
 //platform specific paths to private key stores
 var IMAPPS = {
@@ -64,6 +75,7 @@ var IMAPPS = {
 };
 
 process.title = "otrtalk";
+
 function init_stdin_stderr(){
     (function(stderr){
      process.__defineGetter__('stderr', function(){
@@ -110,9 +122,9 @@ function debug(){
     .option("--pidgin","check pidgin buddylist for known fingerprints (connect mode)","")
     .option("--adium","check adium buddylist for known fingerprints (connect mode)","")
     .option("--lan","seed from local telehash switches on the LAN")
-    .option("--host","act as a telehash seed for the LAN")    
+    .option("--host","act as a telehash seed for the LAN")
     .option("--broadcast","do broadcast LAN discovery");
-    
+
   program
   .command('connect [buddy]')
   .description('establish new trust with buddy')
@@ -177,10 +189,9 @@ function debug(){
 })();//process commands
 
 function shutdown(){
-    if(EXITING) return;
-    EXITING = true;
+    if( this._exiting ){ return; } else { this._exiting = true; }
 
-    if(Network) Network.shutdown();
+    if( Network ) Network.shutdown();
 
     setTimeout(function(){
        process.exit();
@@ -194,6 +205,7 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
     var Talk = {};
     Talk.MODE = talk_mode;
     var profileManager = require("./lib/profiles");
+    var otrm;
 
     getProfile(profileManager,use_profile,function(profile){
         if(!profile) process.exit();
@@ -212,22 +224,20 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
                 process.exit();
             }
             debug("-- <Buddy>",Talk.buddy,Talk.buddyID);
-            if(!OTR_INSTANCE(Talk.profile.otr)){
-             console.log("Error: Invalid OTR module.",Talk.profile.otr);
-             process.exit();
-            }
+            /* use otr module specified in profile */
+            otrm = load_otr(Talk.profile.otr);
 
             //access keystore - account and must already have been created
-            accessKeyStore(Talk.profile,Talk.buddy,(otr.VFS?otr.VFS():undefined),true,function(files){
+            accessKeyStore(Talk.profile,Talk.buddy,(otrm.VFS ? otrm.VFS() : undefined),true,function(files){
                 if(!files) process.exit();
                 Talk.files = files;
-                Talk.user = new otr.User(Talk.files);
+                Talk.user = new otrm.User(Talk.files);
                 ensureAccount(Talk.user,Talk.accountname,Talk.protocol,false,function(result){
                     if(result == 'not-found'){
                         console.log("Error: Accessing Account.");
                         process.exit();
                     }
-                    
+
                     ensureInstag(Talk.user,Talk.accountname,Talk.protocol,function(result,err){
                         if(result=='error'){
                             console.log("Error: Unable to get instance tag.",err);
@@ -253,7 +263,7 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
                                 Talk.MODE = talk_mode = 'connect';
                             }
                         }
-                        
+
                         if(program.broadcast){
                                 debug("-- <Network mode> LAN Broadcast");
                                 Network = require("./lib/discovery/broadcast");
@@ -272,7 +282,7 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
                               console.log("Invalid fingerprint provided");
                               process.exit();
                             }
-                            if(valid_fingerprint){ 
+                            if(valid_fingerprint){
                                 Talk.fingerprint = valid_fingerprint;
                                 debug("Will look for buddy with fingerprint:",Talk.fingerprint);
                             }
@@ -287,12 +297,11 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
                             console.log("This will be used by SMP authentication during connection establishment.");
                             program.password("Enter SMP secret: ","",function(secret){
                                Talk.secret = secret;
-                               startTalking(Talk);
+                               startTalking(Talk,otrm);
                             });
                           }else{
                             Talk.secret = program.secret;
-                            startTalking(Talk);
-
+                            startTalking(Talk,otrm);
                           }
                         });
                     });
@@ -303,7 +312,7 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
 }
 
 
-function startTalking(talk){
+function startTalking(talk,otrm){
     talk.link = new Network.Link(talk.id || talk.accountname, talk.buddyID);
 
     debug("initiating network...");
@@ -314,12 +323,12 @@ function startTalking(talk){
               peer.disconnectLater();
               return;
             }
-            incomingConnection(talk,peer);
+            incomingConnection(talk,peer,otrm);
         });
     },program.host?42424:undefined);
 }
 
-function incomingConnection(talk,peer){
+function incomingConnection(talk,peer,otrm){
     var session = new SessionManager.TalkSession({
             mode:function(){ return talk.MODE },
             accountname : talk.accountname,
@@ -331,7 +340,7 @@ function incomingConnection(talk,peer){
             buddyFP : talk.fingerprint,
             trustedFP: talk.trusted_fingerprints,
             verbose : program.verbose
-        }, otr, peer);
+        }, otrm, peer);
 
     session.on("auth",function(trust){
        if(!talk.auth_queue) talk.auth_queue = async.queue(handleAuth,1);
@@ -425,10 +434,10 @@ function validateFP(str){
     //F88D5DFD BDB1C0A3 0D7543FF 2DF6F58C 28AE3F42
     if(!str) return;
     var valid = true;
-    var segments = []; 
-    str.match( /(\s?\w+\s?)/ig ).forEach(function(segment){        
+    var segments = [];
+    str.match( /(\s?\w+\s?)/ig ).forEach(function(segment){
         segments.push(segment.toUpperCase().trim());
-    });    
+    });
     if(segments.length == 5 ){
       segments.forEach(function(seg){
         if( !seg.match(/^[A-F0-9]{8}$/) ) valid = false;
@@ -462,9 +471,9 @@ function getProfile( pm, name, next ){
             //use the single profile found
             next( pm.profile( pm.profiles()[0]) );
 
-        }else if(pm.profiles().length > 1){            
+        }else if(pm.profiles().length > 1){
             //show a list selection of profiles to choose from.
-            var list = [];            
+            var list = [];
             pm.profiles().forEach(function(prof){
                 list.push( prof );
             });
@@ -491,7 +500,7 @@ function getBuddy(profile,buddy,mode,next){
     if(!buddy){
         if(profile.buddies.length){
             console.log('Select buddy:');
-            var list = [];            
+            var list = [];
             profile.buddies.forEach(function(bud){
                 list.push( bud.alias+":"+bud.id );
             });
@@ -501,7 +510,7 @@ function getBuddy(profile,buddy,mode,next){
         }else{
             console.log("No buddy specified, and your buddy list is empty.");
             need_new_buddy = true;
-        }        
+        }
     }else{
         var buddyID = profile.buddyID(buddy);
         if(buddyID){
@@ -532,8 +541,8 @@ function getBuddy(profile,buddy,mode,next){
     }
 }
 
-function accessKeyStore(profile,buddy,VFS,create,next){
-  if(VFS){
+function accessKeyStore(profile,buddy,vfs,create,next){
+  if(vfs){
     //when using otr3-em and otr4-em otr modules we encrypt the files on the real file system
     //the AES 256bit encryption key and IV are derived from a password
 
@@ -541,7 +550,7 @@ function accessKeyStore(profile,buddy,VFS,create,next){
         //assume already encrypted from previous session.
         //ask once for password.
          program.password('enter key-store password: ', '', function(password){
-            openKeyStore(profile,buddy,VFS,password,next);
+            openKeyStore(profile,buddy,vfs,password,next);
          });
 
     }else{
@@ -555,7 +564,7 @@ function accessKeyStore(profile,buddy,VFS,create,next){
                     console.log("password mismatch!");
                     next();
                 }else{
-                    openKeyStore(profile,buddy,VFS,password,next);
+                    openKeyStore(profile,buddy,vfs,password,next);
                 }
              });
         });
@@ -573,8 +582,8 @@ function openKeyStore(profile,buddy,vfs,password,next){
   next(files);
 }
 
-function accessFingerprintsStore(profile,VFS,next){
-  if(VFS){
+function accessFingerprintsStore(profile,vfs,next){
+  if(vfs){
       program.password('enter key-store password: ', '', function(password){
             openFingerprintsStore(profile,password,next);
       });
@@ -630,7 +639,7 @@ function ensureInstag(user,accountname,protocol,next){
     if(!user.findInstag) {next();return;}
 
     var instag = user.findInstag(accountname, protocol);
-    if(instag) {next();return;}   
+    if(instag) {next();return;}
 
     debug("creating instance tag.");
     user.generateInstag( accountname, protocol,function(err,instag){
@@ -645,8 +654,10 @@ function ensureInstag(user,accountname,protocol,next){
  *  profiles command
  */
 function command_profiles(action, profilename, accountname){
-    var pm = require("./lib/profiles");  
+    var pm = require("./lib/profiles");
     var profile;
+    var otrm;
+
     profilename = profilename || program.profile;
     if(!action){
            pm.list();
@@ -664,15 +675,15 @@ function command_profiles(action, profilename, accountname){
                 profile = pm.profile(profilename);
                 if(!profile) {console.log('Profile "'+profilename+'" not found.');break;}
                 profile.print();
-                otr = OTR_INSTANCE(profile.otr);
-                accessKeyStore(profile,undefined,(otr.VFS?otr.VFS():undefined),false,function(files){
+                otrm = load_otr(profile.otr);
+                accessKeyStore(profile,undefined,(otrm.VFS?otrm.VFS():undefined),false,function(files){
                     if(files){
                         console.log(" == Keystore");
                         var Table = require("cli-table");
                         var table = new Table({
                             head:['accountname','protocol','fingerprint']
                         });
-                        var user = new otr.User( files );
+                        var user = new otrm.User( files );
                         user.accounts().forEach(function(account){
                             table.push([account.accountname,account.protocol,account.fingerprint]);
                         });
@@ -692,10 +703,10 @@ function command_profiles(action, profilename, accountname){
                      otr:program.otr
                     },false,true);
                     if(profile) {
-                        otr = OTR_INSTANCE(program.otr);
-                        accessKeyStore(profile,undefined,(otr.VFS?otr.VFS():undefined),true,function(files){
+                        otrm = load_otr(program.otr);
+                        accessKeyStore(profile,undefined,(otrm.VFS?otrm.VFS():undefined),true,function(files){
                             if(files){
-                              var user = new otr.User( files );
+                              var user = new otrm.User( files );
                               //create the account and Key
                               ensureAccount(user,profile.accountname,profile.protocol,true,function(result,err){
                                 if(err || result == 'not-found') {
@@ -759,7 +770,7 @@ function command_profiles(action, profilename, accountname){
  *  buddies command
  */
 function command_buddies(action,buddy){
-    var pm = require("./lib/profiles");  
+    var pm = require("./lib/profiles");
     var profile;
     profilename = program.profile;
     if(!action) action = 'list';
@@ -793,9 +804,9 @@ function command_buddies(action,buddy){
                 }
                 profile = pm.profile(profilename);
                 if(!profile) {console.log('Profile "'+profilename+'" not found.');break;}
-                otr = OTR_INSTANCE(profile.otr);
+                otrm = load_otr(profile.otr);
 
-                accessFingerprintsStore(profile,(otr.VFS?otr.VFS():undefined),function(buddies){
+                accessFingerprintsStore(profile,(otrm.VFS?otrm.VFS():undefined),function(buddies){
                     if(!buddies.length) process.exit();
                     var Table = require("cli-table");
                     var table = new Table({
@@ -835,7 +846,7 @@ function command_import_key(app,profile,id){
             do_import_key(filename,profile,id);
           }else{
             console.log("keystore file not found:",filename);
-          }          
+          }
       }else{
         console.log("I don't know how to import",app,"keys on this platform.");
       }
@@ -851,13 +862,14 @@ function resolve_home_path(str){
 function do_import_key(filename,profilename,id){
     var UserFiles = require("./lib/files").UserFiles;
     var pm = require("./lib/profiles");
-    
-    var VFS;
+    var vfs;
+    var otrm;
     var target = {};
     var source = {};
     var key;
     var profile;
-    var import_otr = "";    
+    var import_otr = "";
+
     //check if profile already exists - don't overwrite!
     if(pm.profile(profilename)){
       console.log("Profile '"+profilename+"' already exists. Please specify a different profile to import into.");
@@ -868,18 +880,13 @@ function do_import_key(filename,profilename,id){
         console.log("error: Only supported otr modules for import are otr4-em and otr4");
         return;
     }
-    try{
-        otr = require(program.otr);
-    }catch(e){
-        console.log("fatal error loading otr module:",program.otr,e);
-        return;
-    }
 
-    VFS = otr.VFS ? otr.VFS() : undefined;
+    otrm = load_otr(program.otr);
+    vfs = otrm.VFS ? otrm.VFS() : undefined;
 
     console.log("checking application files..");
-    source.files = new UserFiles({keys:filename,fingerprints:path.join(os.tmpdir(),"tmp.fp"),instags:path.join(os.tmpdir(),"tmp.tag")},null,VFS);
-    source.user = new otr.User(source.files);
+    source.files = new UserFiles({keys:filename,fingerprints:path.join(os.tmpdir(),"tmp.fp"),instags:path.join(os.tmpdir(),"tmp.tag")},null,vfs);
+    source.user = new otrm.User(source.files);
 
     console.log("Select an account to import:");
     var list = [];
@@ -888,13 +895,13 @@ function do_import_key(filename,profilename,id){
        list.push(account.protocol+":"+account.accountname);
     });
     program.choose(list,function(i){
-        profile = pm.add(profilename,{id:id,accountname:accounts[i].accountname,protocol:accounts[i].protocol,otr:import_otr},false,true);
+        profile = pm.add(profilename,{id:id,accountname:accounts[i].accountname,protocol:accounts[i].protocol,otr:program.otr},false,true);
         if(!profile){
             console.log("Error adding new profile.");
             return;
         }
         key = source.user.findKey(accounts[i].accountname,accounts[i].protocol);
-        accessKeyStore(profile,null,VFS,true,function(user_files){
+        accessKeyStore(profile,null,vfs,true,function(user_files){
             target.files = user_files;
             if(target.files){
               try{
@@ -903,7 +910,7 @@ function do_import_key(filename,profilename,id){
                   console.log("keystore file conflict!");
                   return;
                 }
-                target.user = new otr.User(target.files);
+                target.user = new otrm.User(target.files);
                 target.user.importKey(accounts[i].accountname,accounts[i].protocol,key.export());
                 target.files.save();
                 pm.save(profilename);
@@ -1027,5 +1034,5 @@ function command_update_check(){
       });
     }).on('error', function(e) {
       console.log("github.com is unreachable.");
-    });    
+    });
 }
