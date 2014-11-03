@@ -459,9 +459,9 @@ function getProfile( pm, name, next ){
       program.confirm("  create it now [y/n]? ",function(ok){
         if(ok){
           console.log("Enter the otrtalk id for this profile. This is a public name that you give out to your buddies.");
-          program.prompt("  otrtalk id: ",function(accountname){
-              if(!accountname) {next();return;}
-              command_profiles('add', name, accountname);
+          program.prompt("  otrtalk id: ",function(id){
+              if(!id) {next();return;}
+              command_profiles('add', name, id);
             });
         }else next();
       });
@@ -486,9 +486,9 @@ function getProfile( pm, name, next ){
             console.log("No profile exists, let's create one now.");
             program.prompt("  profile name: ",function(name){
                 console.log("Enter an otrtalk id for this profile.\nThis is a public name that you give out to your buddies.");
-                program.prompt("  otrtalk id: ",function(accountname){
-                    if(!accountname) {next();return;}
-                    command_profiles('add', name, accountname);
+                program.prompt("  otrtalk id: ",function(id){
+                    if(!id) {next();return;}
+                    command_profiles('add', name, id);
                 });
             });
         }
@@ -653,7 +653,7 @@ function ensureInstag(user,accountname,protocol,next){
 /*
  *  profiles command
  */
-function command_profiles(action, profilename, accountname){
+function command_profiles(action, profilename, id){
     var pm = require("./lib/profiles");
     var profile;
     var otrm;
@@ -696,10 +696,10 @@ function command_profiles(action, profilename, accountname){
                 if(!profilename) {console.log("Profile not specified.");return;}
                 profile = pm.profile(profilename);
                 if(!profile){
-                    if(!accountname){ console.log("No otrtalk id specified"); break;}
+                    if(!id){ console.log("No otrtalk id specified"); break;}
                     //create profile with default settings..
                     profile = pm.add(profilename,{
-                     accountname:accountname,
+                     id:id,
                      otr:program.otr
                     },false,true);
                     if(profile) {
@@ -862,13 +862,10 @@ function resolve_home_path(str){
 function do_import_key(filename,profilename,id){
     var UserFiles = require("./lib/files").UserFiles;
     var pm = require("./lib/profiles");
-    var vfs;
-    var otrm;
     var target = {};
     var source = {};
-    var key;
+    var privkey;
     var profile;
-    var import_otr = "";
 
     //check if profile already exists - don't overwrite!
     if(pm.profile(profilename)){
@@ -881,12 +878,11 @@ function do_import_key(filename,profilename,id){
         return;
     }
 
-    otrm = load_otr(program.otr);
-    vfs = otrm.VFS ? otrm.VFS() : undefined;
-
+    source.otrm = require("otr4-em");
+    source.vfs = source.otrm.VFS();
     console.log("checking application files..");
-    source.files = new UserFiles({keys:filename,fingerprints:path.join(os.tmpdir(),"tmp.fp"),instags:path.join(os.tmpdir(),"tmp.tag")},null,vfs);
-    source.user = new otrm.User(source.files);
+    source.files = new UserFiles({keys:filename,fingerprints:path.join(os.tmpdir(),"tmp.fp"),instags:path.join(os.tmpdir(),"tmp.tag")},null,source.vfs);
+    source.user = new source.otrm.User(source.files);
 
     console.log("Select an account to import:");
     var list = [];
@@ -895,23 +891,20 @@ function do_import_key(filename,profilename,id){
        list.push(account.protocol+":"+account.accountname);
     });
     program.choose(list,function(i){
-        profile = pm.add(profilename,{id:id,accountname:accounts[i].accountname,protocol:accounts[i].protocol,otr:program.otr},false,true);
+        profile = pm.add(profilename,{id:id,otr:program.otr},false,true);
         if(!profile){
             console.log("Error adding new profile.");
             return;
         }
-        key = source.user.findKey(accounts[i].accountname,accounts[i].protocol);
-        accessKeyStore(profile,null,vfs,true,function(user_files){
+        privkey = source.user.findKey(accounts[i].accountname,accounts[i].protocol);
+	      target.otrm = load_otr(program.otr);
+    	  target.vfs = target.otrm.VFS ? target.otrm.VFS() : undefined;
+	      accessKeyStore(profile,null,target.vfs,true,function(user_files){
             target.files = user_files;
             if(target.files){
               try{
-                //make sure import and export files are different paths
-                if(target.files.keys == source.files.keys || target.files.fingerprints == source.files.fingerprints){
-                  console.log("keystore file conflict!");
-                  return;
-                }
-                target.user = new otrm.User(target.files);
-                target.user.importKey(accounts[i].accountname,accounts[i].protocol,key.export());
+                target.user = new target.otrm.User(target.files);
+                target.user.importKey(profile.name,"otrtalk",privkey.export());
                 target.files.save();
                 pm.save(profilename);
                 profile.print();

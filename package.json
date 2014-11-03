@@ -20,7 +20,7 @@
     "dependencies":{
         "async":"*",
         "get-telehash":"=0.1.2",
-        "otr4-em":"=0.0.20",
+        "otr4-em":"=0.0.21",
         "ansi":"=0.2.0",
         "keypress":"=0.2.1",
         "cli-table":"=0.2.0",
