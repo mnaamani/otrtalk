@@ -34,6 +34,8 @@ var fs_existsSync = fs.existsSync || path.existsSync;
 var crypto = require("crypto");
 var os = require("os");
 var _ = require("underscore");
+var imapp = require("./lib/imapp.js");
+var tool = require("./lib/tool.js");
 
 var load_otr = (function(){
   var _instance;
@@ -60,19 +62,6 @@ var load_otr = (function(){
     return _instance;
   })
 })();
-
-//platform specific paths to private key stores
-var IMAPPS = {
-  'pidgin':{
-    'linux': {keys:'~/.purple/otr.private_key',fingerprints:'~/.purple/otr.fingerprints'},
-    'darwin': {keys:'~/.purple/otr.private_key',fingerprints:'~/.purple/otr.fingerprints'},
-    'win32': {keys:'~/Application Data/.purple/otr.private_key',fingerprints:'~/Application Data/.purple/otr.fingerprints'}
-  },
-  'adium':{
-    'darwin':{keys:'~/Library/Application Support/Adium 2.0/Users/Default/otr.private_key',
-              fingerprints:'~/Library/Application Support/Adium 2.0/Users/Default/otr.fingerprints'}
-  }
-};
 
 process.title = "otrtalk";
 
@@ -423,31 +412,9 @@ function startChat(talk,session){
 
 function ensureFingerprint(fp, next){
     if(fp){
-        next(validateFP(fp));
+        next(tool.validateFP(fp));
         //force fingerpint entry in connect mode?
     }else next();
-}
-
-function validateFP(str){
-    //acceptable formats
-    //(5 segements of 8 chars each with white optional space inbetween)
-    //F88D5DFD BDB1C0A3 0D7543FF 2DF6F58C 28AE3F42
-    if(!str) return;
-    var valid = true;
-    var segments = [];
-    str.match( /(\s?\w+\s?)/ig ).forEach(function(segment){
-        segments.push(segment.toUpperCase().trim());
-    });
-    if(segments.length == 5 ){
-      segments.forEach(function(seg){
-        if( !seg.match(/^[A-F0-9]{8}$/) ) valid = false;
-      });
-
-      if(valid) return segments.join(" ");
-    }else if(segments.length == 1){
-       if(!segments[0].match( /^[A-F0-9]{40}$/)) return;
-       return segments[0].match(/([A-F0-9]{8})/g).join(" ");
-    }else return;
 }
 
 function getProfile( pm, name, next ){
@@ -813,7 +780,7 @@ function command_buddies(action,buddy){
                         head:['buddy','otrtalk id','fingerprint']
                     });
                     buddies.forEach( function(buddy){
-                        var trusted = validateFP(buddy.fingerprint);
+                        var trusted = tool.validateFP(buddy.fingerprint);
                         table.push( [buddy.alias,buddy.username,trusted?trusted:''] );
                     });
                     console.log(" == Buddies");
@@ -830,33 +797,36 @@ function command_buddies(action,buddy){
 function command_import_key(app,profile,id){
     var filename;
     profile = profile || program.profile;
+
     if(!app){
       console.log("You did not specify an application.")
       console.log("specify either: pidgin or adium");
       return;
     }
-    if(IMAPPS[app]){
-      if(IMAPPS[app][process.platform]){
-          if(!profile) {
-            console.log("target profile name for import not specified!\n");
-            return;
-          }
-          filename = resolve_home_path(IMAPPS[app][process.platform].keys);
-          if(fs_existsSync(filename)){
-            do_import_key(filename,profile,id);
-          }else{
-            console.log("keystore file not found:",filename);
-          }
-      }else{
-        console.log("I don't know how to import",app,"keys on this platform.");
-      }
-    }else{
-        console.log("I don't know about this application:",app);
-    }
-}
 
-function resolve_home_path(str){
-   return str.replace("~", process.env[process.platform=='win32'?'USERPROFILE':'HOME']);
+    var im = new imapp(app);
+    if(!im.valid()){
+      console.log("I don't know about this application:",app);
+      return;
+    }
+
+    if(!im.supported()){
+      console.log("I don't know how to import",app,"keys on",process.platform);
+      return;
+    }
+
+    if(!profile) {
+       console.log("Target profile name for import not specified!\n");
+       return;
+    }
+
+    filename = im.keystore();
+    console.log("looking for keystore:",filename);
+    if(fs_existsSync(filename)){
+       do_import_key(filename,profile,id);
+    }else{
+       console.log("keystore file not found.");
+    }
 }
 
 function do_import_key(filename,profilename,id){
@@ -931,47 +901,19 @@ function do_import_key(filename,profilename,id){
 }
 
 function imapp_fingerprints_parse(override_app){
-    var filename;
     var app;
-    var parsed = {
-        entries:[]
-    };
+
     app = program.pidgin ? "pidgin" : app;
     app = program.adium  ? "adium"  : app;
     app = override_app || app;
 
-    if(IMAPPS[app]){
-      if(IMAPPS[app][process.platform]){
-          filename = resolve_home_path(IMAPPS[app][process.platform].fingerprints);
-          if(fs_existsSync(filename)){
-            //buddy-username    accountname     protocol    fingerprint     smp
-            var buddies = fs.readFileSync(filename,"utf-8").split('\n');
-            if(buddies && buddies.length){
-                buddies.forEach(function(line){
-                    var entry = line.split(/\s+/);
-                    if(entry[4]=='smp') parsed.entries.push({
-                        username:entry[0],
-                        accountname:entry[1],
-                        protocol:entry[2],
-                        fingerprint:entry[3]
-                    });
-                });
-            }
-          }
-      }
-    }
-    parsed.match = imapp_fingerprints_match;
-    return parsed;
-}
+    var im = new imapp(app);
 
-function imapp_fingerprints_match(fp){
-    var match;
-    if(this.entries.length){
-      this.entries.forEach(function(entry){
-        if(entry.fingerprint.toUpperCase() == fp.replace(/\s/g,"")) match = entry;
-      });
+    if(im.valid()){
+      im.parseFingerprints();
     }
-    return match;
+
+    return im;
 }
 
 /*
@@ -979,14 +921,14 @@ function imapp_fingerprints_match(fp){
  */
 function command_im_buddies(){
   ['pidgin','adium'].forEach(function(app){
-    var buddies = imapp_fingerprints_parse(app);
-    if(!buddies.entries.length) return;
+    var entries = imapp_fingerprints_parse().fingerprints();
+    if(!entries.length) return;
     var Table = require("cli-table");
     var table = new Table({
         head:['username','accountname','protocol','fingerprint']
     });
-    buddies.entries.forEach( function(buddy){
-        var fp = validateFP(buddy.fingerprint);
+    entries.forEach( function(buddy){
+        var fp = tool.validateFP(buddy.fingerprint);
         table.push( [buddy.username,buddy.accountname,buddy.protocol,fp] );
     });
     console.log(" ==",app,"authenticated buddies ==");
