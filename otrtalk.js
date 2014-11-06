@@ -37,32 +37,6 @@ var _ = require("underscore");
 var imapp = require("./lib/imapp.js");
 var tool = require("./lib/tool.js");
 
-var load_otr = (function(){
-  var _instance;
-  var modules = ['otr3','otr4-em','otr4'];
-
-  return (function (choice){
-    if(_instance){
-      throw('you can only load one instance of otr module!');
-    }
-    if(choice && _.contains(modules, choice) == false){
-      console.log("invalid otr module:",choice);
-      process.exit();
-    }
-    try{
-      var mod = _.contains(modules, choice) ? choice : 'otr4-em';
-      console.error("loading module:",mod);
-      _instance =  require( mod );
-      console.error("using otr version:", _instance.version());
-    } catch (e) {
-      console.log("unable to load otr module:",choice,e.code);
-      process.exit();
-      return undefined;
-    }
-    return _instance;
-  })
-})();
-
 process.title = "otrtalk";
 
 function init_stdin_stderr(){
@@ -214,7 +188,7 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
             }
             debug("-- <Buddy>",Talk.buddy,Talk.buddyID);
             /* use otr module specified in profile */
-            otrm = load_otr(Talk.profile.otr);
+            otrm = tool.load_otr(Talk.profile.otr);
 
             //access keystore - account and must already have been created
             accessKeyStore(Talk.profile,Talk.buddy,(otrm.VFS ? otrm.VFS() : undefined),true,function(files){
@@ -642,7 +616,7 @@ function command_profiles(action, profilename, id){
                 profile = pm.profile(profilename);
                 if(!profile) {console.log('Profile "'+profilename+'" not found.');break;}
                 profile.print();
-                otrm = load_otr(profile.otr);
+                otrm = tool.load_otr(profile.otr);
                 accessKeyStore(profile,undefined,(otrm.VFS?otrm.VFS():undefined),false,function(files){
                     if(files){
                         console.log(" == Keystore");
@@ -670,7 +644,7 @@ function command_profiles(action, profilename, id){
                      otr:program.otr
                     },false,true);
                     if(profile) {
-                        otrm = load_otr(program.otr);
+                        otrm = tool.load_otr(program.otr);
                         accessKeyStore(profile,undefined,(otrm.VFS?otrm.VFS():undefined),true,function(files){
                             if(files){
                               var user = new otrm.User( files );
@@ -771,7 +745,7 @@ function command_buddies(action,buddy){
                 }
                 profile = pm.profile(profilename);
                 if(!profile) {console.log('Profile "'+profilename+'" not found.');break;}
-                otrm = load_otr(profile.otr);
+                otrm = tool.load_otr(profile.otr);
 
                 accessFingerprintsStore(profile,(otrm.VFS?otrm.VFS():undefined),function(buddies){
                     if(!buddies.length) process.exit();
@@ -867,7 +841,7 @@ function do_import_key(filename,profilename,id){
             return;
         }
         privkey = source.user.findKey(accounts[i].accountname,accounts[i].protocol);
-	      target.otrm = load_otr(program.otr);
+	      target.otrm = tool.load_otr(program.otr);
     	  target.vfs = target.otrm.VFS ? target.otrm.VFS() : undefined;
 	      accessKeyStore(profile,null,target.vfs,true,function(user_files){
             target.files = user_files;
