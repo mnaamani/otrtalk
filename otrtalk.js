@@ -31,7 +31,7 @@ var Network;
 var SessionManager = require("./lib/sessions");
 var Chat = require("./lib/chat");
 var fs_existsSync = fs.existsSync || path.existsSync;
-var crypto = require("crypto");
+var fcrypto = require("./lib/file_crypto.js");
 var os = require("os");
 var _ = require("underscore");
 var imapp = require("./lib/imapp.js");
@@ -545,7 +545,7 @@ function openFingerprintsStore(profile,password,next){
             });
             return;
         }
-        var buf = openEncryptedFile(fp_file,password);
+        var buf = fcrypto.decryptFile(fp_file,password,"accessing key-store");
         var entry = buf.toString().split(/\s+/);
         if(entry[4]==='smp') buddies.push({
             alias:buddy.alias,
@@ -619,7 +619,7 @@ function command_profiles(action, profilename, id){
                 otrm = tool.load_otr(profile.otr);
                 accessKeyStore(profile,undefined,(otrm.VFS?otrm.VFS():undefined),false,function(files){
                     if(files){
-                        console.log(" == Keystore");
+                        console.log(" == Key-store");
                         var Table = require("cli-table");
                         var table = new Table({
                             head:['accountname','protocol','fingerprint']
@@ -795,11 +795,11 @@ function command_import_key(app,profile,id){
     }
 
     filename = im.keystore();
-    console.log("looking for keystore:",filename);
+    console.log("looking for key-store:",filename);
     if(fs_existsSync(filename)){
        do_import_key(filename,profile,id);
     }else{
-       console.log("keystore file not found.");
+       console.log("key-store file not found.");
     }
 }
 
@@ -852,7 +852,7 @@ function do_import_key(filename,profilename,id){
                 target.files.save();
                 pm.save(profilename);
                 profile.print();
-                console.log(" == Keystore");
+                console.log(" == Key-store");
                 var Table = require("cli-table");
                 var table = new Table({
                     head:['accountname','protocol','fingerprint']
@@ -868,7 +868,7 @@ function do_import_key(filename,profilename,id){
                 console.log("Key Import Failed!",E);
               }
             }else{
-              console.log("error creating new keystore files.");
+              console.log("error creating new key-store files.");
             }
         });
     });
@@ -908,19 +908,6 @@ function command_im_buddies(){
     console.log(" ==",app,"authenticated buddies ==");
     console.log(table.toString());
   });
-}
-
-function openEncryptedFile(filename,password){
-    var buf = fs.readFileSync(filename);
-    if(!password) return buf;
-    try{
-        var c = crypto.createDecipher('aes256', password);
-        var output = c.update(buf.toString('binary'),'binary','binary')+c.final('binary');
-        return (new Buffer(output,'binary'));
-    }catch(e){
-        console.log("Error accessing encrypted store:",e.message);
-        process.exit();
-    }
 }
 
 function command_update_check(){
