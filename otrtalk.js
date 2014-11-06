@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-var OTRTALK_VERSION = "0.1.20";
+var OTRTALK_VERSION = require("./lib/version.js").version;
 /*
     This program is free software; you can redistribute it and/or modify
     it under the terms of version 2 of the GNU General Public License as published by
@@ -924,24 +924,5 @@ function openEncryptedFile(filename,password){
 }
 
 function command_update_check(){
-    var https = require('https');
-    https.get("https://raw.githubusercontent.com/mnaamani/node-otr-talk/master/package.json", function(res) {
-      res.on('data', function(d) {
-        var package = JSON.parse(d.toString());
-        try{
-        if(package.version === OTRTALK_VERSION){
-            console.log("You have the latest version:", OTRTALK_VERSION);
-        }else{
-            console.log("installed version:",OTRTALK_VERSION);
-            console.log("new version:",package.version,"is available to download.");
-
-            console.log("Use the npm package manager to update: npm -g update otrtalk");
-        }
-        }catch(E){
-            console.log("unable to check for updated version.");
-        }
-      });
-    }).on('error', function(e) {
-      console.log("github.com is unreachable.");
-    });
+  require("./lib/version.js").update();
 }
