@@ -309,7 +309,9 @@ function getProfile( pm, name, next ){
           console.log("Enter the otrtalk id for this profile. This is a public name that you give out to your buddies.");
           program.prompt("  otrtalk id: ",function(id){
               if(!id) {next();return;}
-              command_profiles('add', name, id);
+              var cmd = require("./lib/commands/profiles.js");
+              var _cmd = new cmd(UI);
+              _cmd.exec('add', name, id);
             });
         }else next();
       });
@@ -336,7 +338,9 @@ function getProfile( pm, name, next ){
                 console.log("Enter an otrtalk id for this profile.\nThis is a public name that you give out to your buddies.");
                 program.prompt("  otrtalk id: ",function(id){
                     if(!id) {next();return;}
-                    command_profiles('add', name, id);
+                    var cmd = require("./lib/commands/profiles.js");
+                    var _cmd = new cmd(UI);
+                    _cmd.exec('add', name, id);
                 });
             });
         }
@@ -432,6 +436,7 @@ function openKeyStore(profile,buddy,vfs,password,next){
   next(files);
 }
 
+UI.accessFingerprintsStore = accessFingerprintsStore;
 function accessFingerprintsStore(profile,vfs,next){
   if(vfs){
       program.password('enter key-store password: ', '', function(password){
@@ -467,6 +472,7 @@ function openFingerprintsStore(profile,password,next){
   next(buddies);
 }
 
+UI.ensureAccount = ensureAccount;
 function ensureAccount(user,accountname,protocol,generate,next){
     if(!user.fingerprint( accountname, protocol)){
        if(generate){
@@ -498,207 +504,6 @@ function ensureInstag(user,accountname,protocol,next){
        }else next('new');
     });
  }
-
-
-/*
- *  profiles command
- */
-function command_profiles(action, profilename, id){
-    var pm = require("./lib/profiles");
-    var profile;
-    var otrm;
-
-    profilename = profilename || program.profile;
-    if(!action){
-           pm.list();
-    }else{
-        switch(action){
-            case 'list':
-                 pm.list();
-                 break;
-            case 'info':
-                if(!pm.profiles() || !pm.profiles().length) return console.log("No profiles found.");
-                if(!profilename){
-                    if(pm.profiles().length>1) {console.log("Profile not specified.");return;}
-                    profilename = pm.profiles()[0];
-                }
-                profile = pm.profile(profilename);
-                if(!profile) {console.log('Profile "'+profilename+'" not found.');break;}
-                profile.print();
-                otrm = tool.load_otr(profile.otr);
-                accessKeyStore(profile,undefined,(otrm.VFS?otrm.VFS():undefined),false,function(files){
-                    if(files){
-                        console.log(" == Key-store");
-                        var Table = require("cli-table");
-                        var table = new Table({
-                            head:['accountname','protocol','fingerprint']
-                        });
-                        var user = new otrm.User( files );
-                        user.accounts().forEach(function(account){
-                            table.push([account.accountname,account.protocol,account.fingerprint]);
-                        });
-                        console.log(table.toString());
-                        process.exit();
-                    }
-                });
-                break;
-            case 'add':
-                if(!profilename) {console.log("Profile not specified.");return;}
-                profile = pm.profile(profilename);
-                if(!profile){
-                    if(!id){ console.log("No otrtalk id specified"); break;}
-                    //create profile with default settings..
-                    profile = pm.add(profilename,{
-                     id:id,
-                     otr:program.otr
-                    },false,true);
-                    if(profile) {
-                        otrm = tool.load_otr(program.otr);
-                        accessKeyStore(profile,undefined,(otrm.VFS?otrm.VFS():undefined),true,function(files){
-                            if(files){
-                              var user = new otrm.User( files );
-                              //create the account and Key
-                              ensureAccount(user,profile.accountname,profile.protocol,true,function(result,err){
-                                if(err || result == 'not-found') {
-                                    if(err) console.log("Error generating key.",err.message);
-                                    process.exit();
-                                }
-                                if(result=='new'){
-                                    files.save();
-                                    pm.save(profile.name);
-                                    profile.print();
-                                    console.log(" == Generated Key");
-                                    var Table = require("cli-table");
-                                    var table = new Table({
-                                        head:['accountname','protocol','fingerprint']
-                                    });
-                                    user.accounts().forEach(function(account){
-                                        table.push([account.accountname,account.protocol,account.fingerprint]);
-                                    });
-                                    console.log(table.toString());
-                                    process.exit();
-                                }
-                              });
-                            }else{
-                                 process.exit();
-                            }
-                        });
-
-                    }else{
-                        console.log("Failed to create profile.");
-                        process.exit();
-                    }
-
-                }else {
-                    console.log(profilename,"Profile already exists!");
-                    process.exit();
-                }
-                break;
-            case 'remove':
-                if(!pm.profiles() || !pm.profiles().length) return console.log("No profiles found.");
-                if(!profilename){
-                    if(pm.profiles().length>1) {console.log("Profile not specified.");return;}
-                    profilename = pm.profiles()[0];
-                }
-                profile = pm.profile(profilename);
-                if(profile){
-                   program.confirm("**Are you sure you want to remove profile: "+profilename+" [y/n]? ",function(ok){
-                       if(ok){
-                         pm.remove(profilename);
-                         process.exit();
-                       }else process.exit();
-                   });
-                }else{
-                    console.log("Profile does not exist");
-                }
-                break;
-        }
-    }
-}
-
-/*
- *  buddies command
- */
-function command_buddies(action,buddy){
-    var pm = require("./lib/profiles");
-    var profile;
-    profilename = program.profile;
-    if(!action) action = 'list';
-        switch(action){
-            case 'remove':
-                if(!buddy){ console.log("Buddy not specified.");return;}
-                if(!pm.profiles() || !pm.profiles().length) return console.log("No profiles found.");
-                if(!profilename){
-                    if(pm.profiles().length>1) {console.log("Profile not specified.");return;}
-                    profilename = pm.profiles()[0];
-                }
-                profile = pm.profile(profilename);
-                if(!profile) {console.log('Profile "'+profilename+'" not found.');break;}
-                if(profile.buddyID(buddy)){
-                   program.confirm("Are you sure you want to remove buddy: "+buddy+" [y/n]? ",function(ok){
-                       if(!ok) process.exit();
-                       if(fs_existsSync(profile.buddyFingerprints(buddy))){
-                           fs.unlink(profile.buddyFingerprints(buddy));
-                       }
-                       profile.removeBuddy(buddy);
-                       console.log("removed buddy:",buddy);
-                       process.exit();
-                   });
-                }else console.log("Buddy not found.");
-                break;
-            case 'list':
-                if(!pm.profiles() || !pm.profiles().length) return console.log("No profiles found.");
-                if(!profilename){
-                    if(pm.profiles().length>1) {console.log("Profile not specified.");return;}
-                    profilename = pm.profiles()[0];
-                }
-                profile = pm.profile(profilename);
-                if(!profile) {console.log('Profile "'+profilename+'" not found.');break;}
-                otrm = tool.load_otr(profile.otr);
-
-                accessFingerprintsStore(profile,(otrm.VFS?otrm.VFS():undefined),function(buddies){
-                    if(!buddies.length) process.exit();
-                    var Table = require("cli-table");
-                    var table = new Table({
-                        head:['buddy','otrtalk id','fingerprint']
-                    });
-                    buddies.forEach( function(buddy){
-                        var trusted = tool.validateFP(buddy.fingerprint);
-                        table.push( [buddy.alias,buddy.username,trusted?trusted:''] );
-                    });
-                    console.log(" == Buddies");
-                    console.log(table.toString());
-                    process.exit();
-                });
-                break;
-        }
-}
-
-/*
- * im-buddies command
- */
-function command_im_buddies(){
-  var check = [];
-  if(program.pidgin) check.push('pidgin');
-  if(program.adium) check.push('adium');
-  if(!check.length) check = ['pidgin','adium'];
-
-  check.forEach(function(app){
-    var entries = new imapp(app).fingerprints();
-    if(!entries.length) return;
-    var Table = require("cli-table");
-    var table = new Table({
-        head:['username','accountname','protocol','fingerprint']
-    });
-    entries.forEach( function(buddy){
-        var fp = tool.validateFP(buddy.fingerprint);
-        table.push( [buddy.username,buddy.accountname,buddy.protocol,fp] );
-    });
-    console.log(" ==",app,"authenticated buddies ==");
-    console.log(table.toString());
-  });
-}
-
 
 (function(){
   var got_command = false;
@@ -750,17 +555,21 @@ function command_im_buddies(){
   program
     .command('profiles [list|info|add|remove] [profile] [otrtalk-id]')
     .description('manage profiles')
-    .action( function(){
+    .action( function(action, profilename, id){
         got_command = true;
-        command_profiles.apply(this,arguments);
+        var cmd = require("./lib/commands/profiles.js");
+        var _cmd = new cmd(UI);
+        _cmd.exec(action, profilename, id);
      });
 
   program
     .command('buddies [list|remove] [buddy]')
     .description('manage buddies')
-    .action( function(){
+    .action( function(action,buddy){
         got_command = true;
-        command_buddies.apply(this,arguments);
+        var cmd = require("./lib/commands/buddies.js");
+        var _cmd = new cmd(UI);
+        _cmd.exec(action, buddy);
      });
 
   program
@@ -778,7 +587,9 @@ function command_im_buddies(){
     .description('list pidgin and/or adium trusted buddies')
     .action( function(){
         got_command = true;
-        command_im_buddies();
+        var cmd = require("./lib/commands/im-buddies.js");
+        var _cmd = new cmd(UI);
+        _cmd.exec();
     });
 
   program
