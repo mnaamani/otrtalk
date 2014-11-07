@@ -85,7 +85,7 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
         Talk.accountname = Talk.profile.accountname;
         Talk.protocol = Talk.profile.protocol;
 
-        getBuddy(Talk.profile,buddy,Talk.MODE,function(buddy){
+        getBuddy(Talk.profile,buddy,function(buddy){
             if(!buddy) process.exit();
             Talk.buddy = buddy;
             Talk.buddyID = profile.buddyID(buddy);
@@ -347,7 +347,7 @@ function getProfile( pm, name, next ){
     }
 }
 
-function getBuddy(profile,buddy,mode,next){
+function getBuddy(profile,buddy,next){
     var need_new_buddy = false;
     if(!buddy){
         if(profile.buddies.length){
