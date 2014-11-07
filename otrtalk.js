@@ -36,6 +36,7 @@ var os = require("os");
 var _ = require("underscore");
 var imapp = require("./lib/imapp.js");
 var tool = require("./lib/tool.js");
+var UI = {};
 
 process.title = "otrtalk";
 
@@ -56,100 +57,6 @@ function init_stdin_stderr(){
 function debug(){
     if(program.verbose) console.log.apply(console,arguments);
 }
-
-(function(){
-  var got_command = false;
-  init_stdin_stderr();
-  program
-    .links("Report bugs: <https://github.com/mnaamani/node-otr-talk/issues>\n"+
-             "Documentation: <https://github.com/mnaamani/node-otr-talk/wiki>")
-    .version("otrtak "+OTRTALK_VERSION+"\nCopyright (C) 2013 Mokhtar Naamani <mokhtar.naamani@gmail.com>\n"+
-             "This program is free software; you can redistribute it and/or modify it\n"+
-             "under the terms of version 2 of the GNU General Public License as published by\n"+
-             "the Free Software Foundation.\n"+
-             "The Off-the-Record Messaging library is\n"+
-             " Copyright (C) 2004-2012  Ian Goldberg, Rob Smits, Chris Alexander,\n"+
-             "         Willy Lew, Lisa Du, Nikita Borisov\n"+
-             "    <otr@cypherpunks.ca> https://otr.cypherpunks.ca/\n"+
-             "\n"+
-             "The ENet Networking Library is Copyright (c) 2002-2013 Lee Salzman\n\n"+
-             "Report bugs: <https://github.com/mnaamani/node-otr-talk/issues>\n"+
-             "Documentation: <https://github.com/mnaamani/node-otr-talk/wiki>")
-    .option("-v, --verbose","verbose debug info")
-    .option("-e, --stderr","more verbose")
-    .option("-p, --profile <PROFILE>","use specified profile","")
-    .option("-f, --fingerprint <FINGERPRINT>","buddy key fingerprint (connect mode)","")
-    .option("-s, --secret <SECRET>","SMP authentication secret (connect mode)","")
-    .option("-o, --otr <module>","otr4-em, otr4, otr3 (for new profiles) default:otr4-em","otr4-em")
-    .option("-i, --interface <interface>","optional network interface to use for communication")
-    .option("--pidgin","check pidgin buddylist for known fingerprints (connect mode)","")
-    .option("--adium","check adium buddylist for known fingerprints (connect mode)","")
-    .option("--lan","seed from local telehash switches on the LAN")
-    .option("--host","act as a telehash seed for the LAN")
-    .option("--broadcast","do broadcast LAN discovery");
-
-  program
-  .command('connect [buddy]')
-  .description('establish new trust with buddy')
-  .action(function(buddy){
-    got_command = true;
-    command_connect_and_chat(program.profile,buddy,'connect');
-  });
-
-  program
-  .command('chat [buddy]')
-  .description('chat with trusted buddy')
-  .action(function(buddy){
-    got_command = true;
-    command_connect_and_chat(program.profile,buddy,'chat');
-  });
-
-  program
-    .command('profiles [list|info|add|remove] [profile] [otrtalk-id]')
-    .description('manage profiles')
-    .action( function(){
-        got_command = true;
-        command_profiles.apply(this,arguments);
-     });
-
-  program
-    .command('buddies [list|remove] [buddy]')
-    .description('manage buddies')
-    .action( function(){
-        got_command = true;
-        command_buddies.apply(this,arguments);
-     });
-
-  program
-    .command('import-key [pidgin|adium] [profile] [otrtalk-id]')
-    .description('import a key from pidgin/adium into a new profile')
-    .action( function(app,profile,id){
-        got_command = true;
-        command_import_key(app,profile,id);
-    });
-
-  program
-    .command('im-buddies')
-    .description('list pidgin and/or adium trusted buddies')
-    .action( function(){
-        got_command = true;
-        command_im_buddies();
-    });
-
-  program
-    .command('update')
-    .description('check if we are running latest version')
-    .action( function(){
-        got_command = true;
-        command_update_check();
-    });
-
-  program.parse(process.argv);
-  process.stdin.on('end', shutdown );
-  if(!got_command) {
-    program.help();
-  }
-})();//process commands
 
 function shutdown(){
     if( this._exiting ){ return; } else { this._exiting = true; }
@@ -251,7 +158,7 @@ function command_connect_and_chat(use_profile,buddy,talk_mode){
                             }
                             if(program.pidgin || program.adium){
                                 debug("parsing IM app fingerprints");
-                                Talk.trusted_fingerprints = imapp_fingerprints_parse();
+                                Talk.trusted_fingerprints = new imapp().parseFingerprints();
                             }
                           }
                           //ensure we have a secret if we are in connect mode.
@@ -481,6 +388,8 @@ function getBuddy(profile,buddy,mode,next){
         });
     }
 }
+
+UI.accessKeyStore = accessKeyStore;
 
 function accessKeyStore(profile,buddy,vfs,create,next){
   if(vfs){
@@ -766,136 +675,16 @@ function command_buddies(action,buddy){
 }
 
 /*
- * import-key command
- */
-function command_import_key(app,profile,id){
-    var filename;
-    profile = profile || program.profile;
-
-    if(!app){
-      console.log("You did not specify an application.")
-      console.log("specify either: pidgin or adium");
-      return;
-    }
-
-    var im = new imapp(app);
-    if(!im.valid()){
-      console.log("I don't know about this application:",app);
-      return;
-    }
-
-    if(!im.supported()){
-      console.log("I don't know how to import",app,"keys on",process.platform);
-      return;
-    }
-
-    if(!profile) {
-       console.log("Target profile name for import not specified!\n");
-       return;
-    }
-
-    filename = im.keystore();
-    console.log("looking for key-store:",filename);
-    if(fs_existsSync(filename)){
-       do_import_key(filename,profile,id);
-    }else{
-       console.log("key-store file not found.");
-    }
-}
-
-function do_import_key(filename,profilename,id){
-    var UserFiles = require("./lib/files").UserFiles;
-    var pm = require("./lib/profiles");
-    var target = {};
-    var source = {};
-    var privkey;
-    var profile;
-
-    //check if profile already exists - don't overwrite!
-    if(pm.profile(profilename)){
-      console.log("Profile '"+profilename+"' already exists. Please specify a different profile to import into.");
-      return;
-    }
-
-    if( !(program.otr == "otr4-em" || program.otr == "otr4")){
-        console.log("error: Only supported otr modules for import are otr4-em and otr4");
-        return;
-    }
-
-    source.otrm = require("otr4-em");
-    source.vfs = source.otrm.VFS();
-    console.log("checking application files..");
-    source.files = new UserFiles({keys:filename,fingerprints:path.join(os.tmpdir(),"tmp.fp"),instags:path.join(os.tmpdir(),"tmp.tag")},null,source.vfs);
-    source.user = new source.otrm.User(source.files);
-
-    console.log("Select an account to import:");
-    var list = [];
-    var accounts = source.user.accounts();
-    accounts.forEach(function(account){
-       list.push(account.protocol+":"+account.accountname);
-    });
-    program.choose(list,function(i){
-        profile = pm.add(profilename,{id:id,otr:program.otr},false,true);
-        if(!profile){
-            console.log("Error adding new profile.");
-            return;
-        }
-        privkey = source.user.findKey(accounts[i].accountname,accounts[i].protocol);
-	      target.otrm = tool.load_otr(program.otr);
-    	  target.vfs = target.otrm.VFS ? target.otrm.VFS() : undefined;
-	      accessKeyStore(profile,null,target.vfs,true,function(user_files){
-            target.files = user_files;
-            if(target.files){
-              try{
-                target.user = new target.otrm.User(target.files);
-                target.user.importKey(profile.name,"otrtalk",privkey.export());
-                target.files.save();
-                pm.save(profilename);
-                profile.print();
-                console.log(" == Key-store");
-                var Table = require("cli-table");
-                var table = new Table({
-                    head:['accountname','protocol','fingerprint']
-                });
-                target.user.accounts().forEach(function(account){
-                   table.push([account.accountname,account.protocol,account.fingerprint]);
-                });
-                console.log(table.toString());
-                console.log("Imported key successfully to profile:",profilename);
-                process.exit();
-                return;//success
-              }catch(E){
-                console.log("Key Import Failed!",E);
-              }
-            }else{
-              console.log("error creating new key-store files.");
-            }
-        });
-    });
-}
-
-function imapp_fingerprints_parse(override_app){
-    var app;
-
-    app = program.pidgin ? "pidgin" : app;
-    app = program.adium  ? "adium"  : app;
-    app = override_app || app;
-
-    var im = new imapp(app);
-
-    if(im.valid()){
-      im.parseFingerprints();
-    }
-
-    return im;
-}
-
-/*
  * im-buddies command
  */
 function command_im_buddies(){
-  ['pidgin','adium'].forEach(function(app){
-    var entries = imapp_fingerprints_parse().fingerprints();
+  var check = [];
+  if(program.pidgin) check.push('pidgin');
+  if(program.adium) check.push('adium');
+  if(!check.length) check = ['pidgin','adium'];
+
+  check.forEach(function(app){
+    var entries = new imapp(app).fingerprints();
     if(!entries.length) return;
     var Table = require("cli-table");
     var table = new Table({
@@ -910,6 +699,100 @@ function command_im_buddies(){
   });
 }
 
-function command_update_check(){
-  require("./lib/version.js").update();
-}
+
+(function(){
+  var got_command = false;
+  init_stdin_stderr();
+  program
+    .links("Report bugs: <https://github.com/mnaamani/node-otr-talk/issues>\n"+
+             "Documentation: <https://github.com/mnaamani/node-otr-talk/wiki>")
+    .version("otrtak "+OTRTALK_VERSION+"\nCopyright (C) 2013 Mokhtar Naamani <mokhtar.naamani@gmail.com>\n"+
+             "This program is free software; you can redistribute it and/or modify it\n"+
+             "under the terms of version 2 of the GNU General Public License as published by\n"+
+             "the Free Software Foundation.\n"+
+             "The Off-the-Record Messaging library is\n"+
+             " Copyright (C) 2004-2012  Ian Goldberg, Rob Smits, Chris Alexander,\n"+
+             "         Willy Lew, Lisa Du, Nikita Borisov\n"+
+             "    <otr@cypherpunks.ca> https://otr.cypherpunks.ca/\n"+
+             "\n"+
+             "The ENet Networking Library is Copyright (c) 2002-2013 Lee Salzman\n\n"+
+             "Report bugs: <https://github.com/mnaamani/node-otr-talk/issues>\n"+
+             "Documentation: <https://github.com/mnaamani/node-otr-talk/wiki>")
+    .option("-v, --verbose","verbose debug info")
+    .option("-e, --stderr","more verbose")
+    .option("-p, --profile <PROFILE>","use specified profile","")
+    .option("-f, --fingerprint <FINGERPRINT>","buddy key fingerprint (connect mode)","")
+    .option("-s, --secret <SECRET>","SMP authentication secret (connect mode)","")
+    .option("-o, --otr <module>","otr4-em, otr4, otr3 (for new profiles) default:otr4-em","otr4-em")
+    .option("-i, --interface <interface>","optional network interface to use for communication")
+    .option("--pidgin","check pidgin buddylist for known fingerprints (connect mode)","")
+    .option("--adium","check adium buddylist for known fingerprints (connect mode)","")
+    .option("--lan","seed from local telehash switches on the LAN")
+    .option("--host","act as a telehash seed for the LAN")
+    .option("--broadcast","do broadcast LAN discovery");
+
+  program
+  .command('connect [buddy]')
+  .description('establish new trust with buddy')
+  .action(function(buddy){
+    got_command = true;
+    command_connect_and_chat(program.profile,buddy,'connect');
+  });
+
+  program
+  .command('chat [buddy]')
+  .description('chat with trusted buddy')
+  .action(function(buddy){
+    got_command = true;
+    command_connect_and_chat(program.profile,buddy,'chat');
+  });
+
+  program
+    .command('profiles [list|info|add|remove] [profile] [otrtalk-id]')
+    .description('manage profiles')
+    .action( function(){
+        got_command = true;
+        command_profiles.apply(this,arguments);
+     });
+
+  program
+    .command('buddies [list|remove] [buddy]')
+    .description('manage buddies')
+    .action( function(){
+        got_command = true;
+        command_buddies.apply(this,arguments);
+     });
+
+  program
+    .command('import-key [pidgin|adium] [profile] [otrtalk-id]')
+    .description('import a key from pidgin/adium into a new profile')
+    .action( function(app,profile,id){
+        got_command = true;
+        var cmd = require("./lib/commands/import-key.js");
+        var _cmd = new cmd(UI);
+        _cmd.exec(app,profile,id);
+    });
+
+  program
+    .command('im-buddies')
+    .description('list pidgin and/or adium trusted buddies')
+    .action( function(){
+        got_command = true;
+        command_im_buddies();
+    });
+
+  program
+    .command('update')
+    .description('check if we are running latest version')
+    .action( function(){
+        got_command = true;
+        var cmd = require("./lib/commands/update.js");
+        var _cmd = new cmd(); _cmd.exec();
+    });
+
+  program.parse(process.argv);
+  process.stdin.on('end', shutdown );
+  if(!got_command) {
+    program.help();
+  }
+})();//process commands
