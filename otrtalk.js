@@ -74,28 +74,29 @@ function shutdown(){
 function command_connect_and_chat(use_profile,buddy,talk_mode){
     var Talk = {};
     Talk.MODE = talk_mode;
-    var profileManager = require("./lib/profiles");
+    var Profiles = require("./lib/profiles");
+    var pm = new Profiles();
     var otrm;
 
-    getProfile(profileManager,use_profile,function(profile){
+    getProfile(pm,use_profile,function(profile){
         if(!profile) process.exit();
-        debug("-- <Profile>",profile.name);
+        debug("-- <Profile>",profile.name());
         Talk.profile = profile;
-        Talk.id = Talk.profile.id;//otrtalk id
-        Talk.accountname = Talk.profile.accountname;
-        Talk.protocol = Talk.profile.protocol;
+        Talk.id = Talk.profile.id();//otrtalk id
+        Talk.accountname = Talk.profile.accountname();
+        Talk.protocol = Talk.profile.protocol();
 
         getBuddy(Talk.profile,buddy,function(buddy){
             if(!buddy) process.exit();
             Talk.buddy = buddy;
             Talk.buddyID = profile.buddyID(buddy);
-            if(Talk.buddyID == profile.accountname){
+            if(Talk.buddyID == profile.id()){
                 console.log("otrtalk id conflict. Profile and buddy have same otrtalk id.");
                 process.exit();
             }
             debug("-- <Buddy>",Talk.buddy,Talk.buddyID);
             /* use otr module specified in profile */
-            otrm = tool.load_otr(Talk.profile.otr);
+            otrm = tool.load_otr(Talk.profile.otr());
 
             //access keystore - account and must already have been created
             accessKeyStore(Talk.profile,Talk.buddy,(otrm.VFS ? otrm.VFS() : undefined),true,function(files){
@@ -350,14 +351,14 @@ function getProfile( pm, name, next ){
 function getBuddy(profile,buddy,next){
     var need_new_buddy = false;
     if(!buddy){
-        if(profile.buddies.length){
+        if(profile.buddies().length){
             console.log('Select buddy:');
             var list = [];
-            profile.buddies.forEach(function(bud){
+            profile.buddies().forEach(function(bud){
                 list.push( bud.alias+":"+bud.id );
             });
             program.choose(list, function(i){
-                next( profile.buddies[i].alias );
+                next( profile.buddies()[i].alias );
             });
         }else{
             console.log("No buddy specified, and your buddy list is empty.");
@@ -400,7 +401,7 @@ function accessKeyStore(profile,buddy,vfs,create,next){
     //when using otr3-em and otr4-em otr modules we encrypt the files on the real file system
     //the AES 256bit encryption key and IV are derived from a password
 
-    if(fs_existsSync(profile.keys)){
+    if(fs_existsSync(profile.keys())){
         //assume already encrypted from previous session.
         //ask once for password.
          program.password('enter key-store password: ', '', function(password){
@@ -449,8 +450,8 @@ function accessFingerprintsStore(profile,vfs,next){
 
 function openFingerprintsStore(profile,password,next){
   var buddies = [];
-  profile.buddies.forEach(function(buddy){
-        var fp_file = path.join(profile.fingerprints,buddy.alias);
+  profile.buddies().forEach(function(buddy){
+        var fp_file = path.join(profile.fingerprints(),buddy.alias);
         if(!fs_existsSync(fp_file)){
             buddies.push({
                 alias:buddy.alias,
