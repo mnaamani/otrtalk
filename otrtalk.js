@@ -95,13 +95,6 @@ UI.accessKeyStore = function (profile,buddy,vfs,create,next){
     next();
 };
 
-UI.accessFingerprintsStore = function (profile,vfs,next){
-  if(!vfs) return next(profile.openFingerprintsStore());
-
-  program.password('enter key-store password: ', '', function(password){
-        next(profile.openFingerprintsStore(password));
-  });
-};
 
 UI.ensureAccount = function (user,accountname,protocol,generate,next){
   var fingerprint = user.fingerprint( accountname, protocol);
