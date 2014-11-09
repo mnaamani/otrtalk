@@ -28,7 +28,6 @@ var fs = require("fs");
 var path = require("path");
 var assert = require("assert");
 var fs_existsSync = fs.existsSync || path.existsSync;
-var fcrypto = require("./lib/file_crypto.js");
 var os = require("os");
 var imapp = require("./lib/imapp.js");
 var tool = require("./lib/tool.js");
@@ -70,7 +69,7 @@ UI.getProfile = function (pm, name, next){
         if(ok){
           console.log("Enter the otrtalk id for this profile. This is a public name that you give out to your buddies.");
           program.prompt("  otrtalk id: ",function(id){
-              if(!id) return next(); 
+              if(!id) return next();
               var cmd = require("./lib/commands/profiles.js");
               var _cmd = new cmd(UI);
               _cmd.exec('add', name, id);
@@ -140,26 +139,26 @@ UI.getBuddy = function(profile,buddy,next){
             list.push( bud.alias+":"+bud.id );
         });
         program.choose(list, function(i){
-            next( profile.buddies()[i].alias );
+            next(profile.buddies()[i].alias);
         });
-    }else{
-        console.log("No buddy specified, and your buddy list is empty.");
-        console.log("Enter new buddy details:");
-        program.prompt("  alias: ",function(buddy){
-            program.prompt("  "+buddy+"'s otrtalk id: ", function(id){
-                if(!id) {return next();}
-                profile.addBuddy(buddy,id);//TODO:handle case if buddy not added
-                next(buddy);
-            });
-        });
+        return;
     }
 
+    console.log("No buddy specified, and your buddy list is empty.");
+    console.log("Enter new buddy details:");
+    program.prompt("  alias: ",function(buddy){
+        program.prompt("  "+buddy+"'s otrtalk id: ", function(id){
+            if(!id) {return next();}
+            profile.addBuddy(buddy,id);//TODO:handle case if buddy not added
+            next(buddy);
+        });
+    });
 };
 
 UI.accessKeyStore = function (profile,buddy,vfs,create,next){
 
     if(!vfs){
-      return openKeyStore(profile,buddy,undefined,undefined,next);
+      return next(profile.openKeyStore(buddy));
     }
 
     /*
@@ -171,7 +170,7 @@ UI.accessKeyStore = function (profile,buddy,vfs,create,next){
       //assume already encrypted from previous session.
       //ask once for password.
       program.password('enter key-store password: ', '', function(password){
-          openKeyStore(profile,buddy,vfs,password,next);
+          next(profile.openKeyStore(buddy,vfs,password));
       });
       return;
     }
@@ -186,7 +185,7 @@ UI.accessKeyStore = function (profile,buddy,vfs,create,next){
                   console.log("password mismatch!");
                   next();
               }else{
-                  openKeyStore(profile,buddy,vfs,password,next);
+                  next(profile.openKeyStore(buddy,vfs,password));
               }
            });
       });
@@ -196,44 +195,13 @@ UI.accessKeyStore = function (profile,buddy,vfs,create,next){
     next();
 };
 
-function openKeyStore(profile,buddy,vfs,password,next){
-  var UserFiles = require("./lib/files").UserFiles;
-  var files = new UserFiles(profile, buddy, vfs, password );
-  next(files);
-}
-
 UI.accessFingerprintsStore = function (profile,vfs,next){
-  if(!vfs) return openFingerprintsStore(profile,undefined,next);
+  if(!vfs) return next(profile.openFingerprintsStore());
 
   program.password('enter key-store password: ', '', function(password){
-        openFingerprintsStore(profile,password,next);
+        next(profile.openFingerprintsStore(password));
   });
 };
-
-function openFingerprintsStore(profile,password,next){
-  var buddies = [];
-  profile.buddies().forEach(function(buddy){
-        var fp_file = path.join(profile.fingerprints(),buddy.alias);
-        if(!fs_existsSync(fp_file)){
-            buddies.push({
-                alias:buddy.alias,
-                username:buddy.id,
-                fingerprint:''
-            });
-            return;
-        }
-        var buf = fcrypto.decryptFile(fp_file,password,"accessing key-store");
-        var entry = buf.toString().split(/\s+/);
-        if(entry[4]==='smp') buddies.push({
-            alias:buddy.alias,
-            username:entry[0],
-            accountname:entry[1],
-            protocol:entry[2],
-            fingerprint:entry[3]
-        });
-  });
-  next(buddies);
-}
 
 UI.ensureAccount = function (user,accountname,protocol,generate,next){
   var fingerprint = user.fingerprint( accountname, protocol);
