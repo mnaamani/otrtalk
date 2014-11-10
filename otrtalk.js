@@ -120,21 +120,6 @@ UI.ensureAccount = function (user,accountname,protocol,generate,next){
 
 };
 
-UI.ensureInstag = function(user,accountname,protocol,next){
-    if(!user.findInstag) return next();
-
-    var instag = user.findInstag(accountname, protocol);
-
-    if(instag) return next();
-
-    //debug("creating instance tag.");
-    user.generateInstag( accountname, protocol,function(err,instag){
-       if(err){
-          next('error',err);
-       }else next('new');
-    });
- };
-
 (function(){
   var got_command = false;
   init_stdin_stderr();
