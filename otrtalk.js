@@ -50,6 +50,7 @@ function init_stdin_stderr(){
 }
 
 function shutdown(){
+  console.log("Terminating");
     setTimeout(function(){
        process.exit();
     },300);
