@@ -45,15 +45,8 @@ function init_stdin_stderr(){
     })(process.stderr);
 
     if(process.platform!='win32') process.on('SIGINT',function(){
-        shutdown();
+        process.exit();
     });
-}
-
-function shutdown(){
-  console.log("Terminating");
-    setTimeout(function(){
-       process.exit();
-    },300);
 }
 
 (function(){
@@ -157,7 +150,7 @@ function shutdown(){
     });
 
   program.parse(process.argv);
-  process.stdin.on('end', shutdown );
+  process.stdin.on('end', process.exit );
   if(!got_command) {
     program.help();
   }
