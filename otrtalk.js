@@ -22,15 +22,7 @@ var OTRTALK_VERSION = require("./lib/version.js").version;
     ENet Networking Library is Copyright (c) 2002-2013 Lee Salzman
 */
 
-var async = require("async");
 var program = require("./lib/commander");
-var fs = require("fs");
-var path = require("path");
-var assert = require("assert");
-var fs_existsSync = fs.existsSync || path.existsSync;
-var os = require("os");
-var imapp = require("./lib/imapp.js");
-var tool = require("./lib/tool.js");
 var UI = require("./lib/ui.js");
 
 process.title = "otrtalk";
