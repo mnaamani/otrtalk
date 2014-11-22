@@ -1,3 +1,13 @@
+v0.1.22 - November 22 2014
+
+    - fixed handling of ctrl-C in chat session
+    - fixed shutting down properly when remote party ends chat
+    - fixed saving profile after key-import
+
+v0.1.21 - November 20 2014
+
+    - fixed key-import when using otr4 module
+
 v0.1.20 - October 30 2014
 
     - update to otr4-em v0.0.19 (libotr4.1.0 and libgcrypt 1.6.2)
