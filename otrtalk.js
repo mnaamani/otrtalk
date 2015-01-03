@@ -61,7 +61,6 @@ function init_stdin_stderr(){
              "Documentation: <https://github.com/mnaamani/node-otr-talk/wiki>")
     .option("-v, --verbose","verbose debug info")
     .option("-e, --stderr","more verbose")
-    .option("-p, --profile <PROFILE>","use specified profile","")
     .option("-f, --fingerprint <FINGERPRINT>","buddy key fingerprint (connect mode)","")
     .option("-s, --secret <SECRET>","SMP authentication secret (connect mode)","")
     .option("-o, --otr <module>","otr4-em, otr4, otr3 (for new profiles) default:otr4-em","otr4-em")
@@ -75,41 +74,41 @@ function init_stdin_stderr(){
   program
   .command('connect [buddy]')
   .description('establish new trust with buddy')
-  .action(function(buddy){
+  .action(function(alias){
     got_command = true;
     var cmd = require("./lib/commands/chat_connect.js");
     var _cmd = new cmd(UI);
-    _cmd.exec(program.profile,buddy,'connect');
+    _cmd.exec(alias,'connect');
   });
 
   program
   .command('chat [buddy]')
   .description('chat with trusted buddy')
-  .action(function(buddy){
+  .action(function(alias){
     got_command = true;
     var cmd = require("./lib/commands/chat_connect.js");
     var _cmd = new cmd(UI);
-    _cmd.exec(program.profile,buddy,'chat');
+    _cmd.exec(alias,'chat');
   });
 
   program
-    .command('profiles [list|info|add|remove] [profile] [otrtalk-id]')
+    .command('profiles [list|info|add|remove]')
     .description('manage profiles')
-    .action( function(action, profilename, id){
+    .action( function(action){
         got_command = true;
         var cmd = require("./lib/commands/profiles.js");
         var _cmd = new cmd(UI);
-        _cmd.exec(action, profilename || program.profile, id);
+        _cmd.exec(action);
      });
 
   program
-    .command('buddies [list|remove] [buddy]')
+    .command('buddies [list|remove]')
     .description('manage buddies')
-    .action( function(action,buddy){
+    .action( function(action){
         got_command = true;
         var cmd = require("./lib/commands/buddies.js");
         var _cmd = new cmd(UI);
-        _cmd.exec(action, buddy);
+        _cmd.exec(action);
      });
 
   program
