@@ -1,6 +1,6 @@
 {
     "name":     "otrtalk",
-    "version":  "0.1.23",
+    "version":  "0.2.0",
     "main": "otrtalk.js",
     "bin" : {
         "otrtalk" : "./otrtalk.js"
@@ -20,11 +20,11 @@
     "dependencies":{
         "async":"*",
         "get-telehash":"=0.1.2",
-        "otr4-em":"=0.0.21",
+        "otr4-em":"=0.1.3",
         "ansi":"=0.2.0",
         "keypress":"=0.2.1",
         "cli-table":"=0.2.0",
         "underscore":"*"
     },
-    "license": "GPLv2"
+    "license": "GPL-2.0"
 }
