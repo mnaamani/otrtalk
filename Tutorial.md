@@ -198,8 +198,8 @@ establish a new connection use the --piding or --adium option
 
     otrtalk connect mybuddy --pidgin
 
-On successful SMP authentication the fingerprint of the peer will be cross checked against your IM buddies and if a match
-is found their account name will be shown. This assists in verifying the correct fingerprint.
+For each peer that connects their fingerprint will be cross checked against your authenticated IM buddies and if a match
+is found SMP will be performed otherwise the connection will be rejected. This assists in verifying the correct fingerprint.
 
 ### Additional network options
 
