@@ -70,9 +70,8 @@ function init_stdin_stderr() {
 		.option("-i, --interface <interface>", "optional network interface to use for communication")
 		.option("--pidgin", "check pidgin buddylist for known fingerprints (connect mode)", "")
 		.option("--adium", "check adium buddylist for known fingerprints (connect mode)", "")
-		.option("--lan", "seed from local telehash switches on the LAN")
-		.option("--host", "act as a telehash seed for the LAN")
-		.option("--broadcast", "do broadcast LAN discovery")
+		.option("--port <port>", "listen on custom port")
+		.option("--broadcast", "broadcast LAN discovery")
 		.option("--seed <ip:port>", "use custom seed");
 
 	program
