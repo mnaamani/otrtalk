@@ -203,18 +203,8 @@ is found SMP will be performed otherwise the connection will be rejected. This a
 
 ### Additional network options
 
-The underlyig p2p protocol used by otrtalk is telehash. By default it will join the global network. Alternatively you can
-join a local telehash network on the LAN.
-
-One user should user at least needs to use the `--host` option when connecting or chatting:
-
-    otrtalk chat alice --host
-
-Another user on the network only needs to use `--lan` option:
-
-    otrtalk chat bob --lan
-
-On the LAN it is possible to bypass telehash completely using the `--broadcast` option (both parties must use the broadcast option)
+If you know your buddy is on the same LAN subnet you can discover them on the network
+using the `--broadcast` option (your buddy must also use the option)
 
     otrtalk chat bob --broadcast
 
