@@ -72,7 +72,8 @@ function init_stdin_stderr() {
 		.option("--adium", "check adium buddylist for known fingerprints (connect mode)", "")
 		.option("--lan", "seed from local telehash switches on the LAN")
 		.option("--host", "act as a telehash seed for the LAN")
-		.option("--broadcast", "do broadcast LAN discovery");
+		.option("--broadcast", "do broadcast LAN discovery")
+		.option("--seed <ip:port>", "use custom seed");
 
 	program
 		.command('connect [buddy]')
