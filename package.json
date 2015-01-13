@@ -19,7 +19,7 @@
     },
     "dependencies":{
         "async":"*",
-        "get-telehash":"=0.1.2",
+        "get-telehash":"=0.1.3",
         "otr4-em":"=0.1.3",
         "ansi":"=0.2.0",
         "keypress":"=0.2.1",
