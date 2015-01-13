@@ -1,0 +1,8 @@
+
+Original code from:
+https://github.com/indutny/node-nat-upnp
+
+Adapted to remove dependancy on netroute, but we have to assume that only
+a single internet gateway is on the network which is a reasonable assumption
+for most home users.
+

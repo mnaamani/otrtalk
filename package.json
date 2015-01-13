@@ -24,7 +24,10 @@
         "ansi":"=0.2.0",
         "keypress":"=0.2.1",
         "cli-table":"=0.2.0",
-        "underscore":"*"
+        "underscore":"*",
+        "xml2js": "~0.1.14",
+        "request": "~2.10.0",
+        "ip": "~0.0.1"
     },
     "license": "GPL-2.0"
 }
