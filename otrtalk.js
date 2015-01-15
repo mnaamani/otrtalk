@@ -30,24 +30,10 @@ var _cmd; //command which was executed
 
 process.title = "otrtalk";
 
-function init_stdin_stderr() {
-    (function (stderr) {
-        process.__defineGetter__('stderr', function () {
-            return {
-                write: function () {
-                    if (program.stderr) stderr.write.apply(stderr, arguments);
-                }
-            };
-        });
-    })(process.stderr);
-
     if (process.platform != 'win32') process.on('SIGINT', function () {
         if (_cmd.exit) _cmd.exit();
     });
-}
 
-(function () {
-    init_stdin_stderr();
     program
         .links("Report bugs: <https://github.com/mnaamani/node-otr-talk/issues>\n" +
             "Documentation: <https://github.com/mnaamani/node-otr-talk/wiki>")
@@ -63,8 +49,7 @@ function init_stdin_stderr() {
             "The ENet Networking Library is Copyright (c) 2002-2013 Lee Salzman\n\n" +
             "Report bugs: <https://github.com/mnaamani/node-otr-talk/issues>\n" +
             "Documentation: <https://github.com/mnaamani/node-otr-talk/wiki>")
-        .option("-v, --verbose", "verbose debug info")
-        .option("-e, --stderr", "more verbose")
+        .option("-v, --verbose", "show debug info")
         .option("-f, --fingerprint <FINGERPRINT>", "buddy key fingerprint (connect mode)", "")
         .option("-s, --secret <SECRET>", "SMP authentication secret (connect mode)", "")
         .option("-o, --otr <module>", "otr4-em, otr4 (for new profiles) default:otr4-em", "otr4-em")
@@ -155,10 +140,11 @@ function init_stdin_stderr() {
         });
 
     program.parse(process.argv);
+
     process.stdin.on('end', function () {
         if (_cmd.exit) _cmd.exit();
     });
+
     if (!_cmd) {
         program.help();
     }
-})(); //process commands
