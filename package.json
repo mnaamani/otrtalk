@@ -1,30 +1,30 @@
 {
-    "name":     "otrtalk",
-    "version":  "0.2.0",
+    "name": "otrtalk",
+    "version": "0.2.0",
     "main": "otrtalk.js",
-    "bin" : {
-        "otrtalk" : "./otrtalk.js"
+    "bin": {
+        "otrtalk": "./otrtalk.js"
     },
     "description": "distributed p2p off-the-record two-party chat",
     "homepage": "https://github.com/mnaamani/node-otr-talk",
-    "keywords" : ["p2p", "messaging", "chat", "privacy", "encrypted", "otr", "telehash", "freedom"],
-    "author":{
-        "name":"Mokhtar Naamani",
-        "email":"mokhtar.naamani@gmail.com",
-        "url":"https://github.com/mnaamani"
+    "keywords": ["p2p", "messaging", "chat", "privacy", "encrypted", "otr", "telehash", "freedom", "dht", "enet"],
+    "author": {
+        "name": "Mokhtar Naamani",
+        "email": "mokhtar.naamani@gmail.com",
+        "url": "https://github.com/mnaamani"
     },
-    "repository":{
-        "type":"git",
-        "url":"git@github.com:mnaamani/node-otr-talk.git"
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:mnaamani/node-otr-talk.git"
     },
-    "dependencies":{
-        "async":"*",
-        "get-telehash":"=0.1.3",
-        "otr4-em":"=0.1.3",
-        "ansi":"=0.2.0",
-        "keypress":"=0.2.1",
-        "cli-table":"=0.2.0",
-        "underscore":"*",
+    "dependencies": {
+        "async": "*",
+        "get-telehash": "=0.1.3",
+        "otr4-em": "=0.1.3",
+        "ansi": "=0.2.0",
+        "keypress": "=0.2.1",
+        "cli-table": "=0.2.0",
+        "underscore": "*",
         "xml2js": "~0.1.14",
         "request": "~2.10.0",
         "ip": "~0.0.1"

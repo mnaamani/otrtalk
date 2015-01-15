@@ -201,18 +201,27 @@ establish a new connection use the --piding or --adium option
 For each peer that connects their fingerprint will be cross checked against your authenticated IM buddies and if a match
 is found SMP will be performed otherwise the connection will be rejected. This assists in verifying the correct fingerprint.
 
-### Additional network options
+### Chatting with someone on the same LAN/subnet
 
 If you know your buddy is on the same LAN subnet you can discover them on the network
 using the `--broadcast` option (your buddy must also use the option)
 
     otrtalk chat bob --broadcast
 
-otrtalk will select the first (non internal/loopback) network interface for communication on the p2p network.
-If you have multiple connection you can specify the one to be used with the `-i` or `--interface` option:
+### Selecting a Network interface to use
+
+otrtalk will select the first external network interface for communication on the p2p network.
+If you have multiple connections you can specify the one to be used with the `-i` or `--interface` option:
 
     otrtalk chat bob --interface eth2
 
+### Firewall/NAT problems?
+
+If you are having issues successfully connecting you may be behind a restrictive NAT/firewall.
+If your NAT/firewall router supports uPNP you can use the --upnp option and otrtalk will try
+to perform port-mapping:
+
+    otrtalk chat bob --upnp
 ### Keeping otrtalk uptodate
 
 To check if a new version is available:
