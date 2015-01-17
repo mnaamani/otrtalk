@@ -58,7 +58,8 @@ program
 	.option("--port <port>", "listen on custom port")
 	.option("--broadcast", "broadcast LAN discovery")
 	.option("--seed <ip:port>", "use custom seed")
-	.option("--upnp", "try to use upnp port mapping");
+	.option("--upnp", "try to use upnp port mapping")
+	.option("--lan", "share our local ip when searching for buddy");
 
 program
 	.command('connect [buddy]')
