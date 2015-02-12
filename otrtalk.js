@@ -22,53 +22,35 @@
 	ENet Networking Library is Copyright (c) 2002-2013 Lee Salzman
 */
 
-/* This is the Main Application Controller */
+var commands = !module.parent ? require("./lib/commands") : undefined;
 
-process.title = "otrtalk";
+if (commands) {
+	process.title = "otrtalk";
 
-var commands;
-
-if (!module.parent) {
 	//otrtalk being run as an application - process commands and options
-	commands = require("./lib/commands");
 	commands.process(function (err, cmd) {
+		var mainCtrl;
 		if (err) {
 			console.log(err);
 			return;
 		}
 
 		if (cmd) {
-			if (process.platform !== 'win32') process.on('SIGINT', function () {
-				if (typeof cmd.exit === 'function') {
-					cmd.exit(function (err) {
-						if (err) console.log(err);
-						process.exit();
-					});
-				} else {
-					process.exit();
-				}
+			mainCtrl = require("./lib/controllers/main.js");
+			mainCtrl.on("shutdown", function () {
+				console.log("exiting.");
+				process.exit();
 			});
 
-			process.stdin.on('end', function () {
-				if (typeof cmd.exit === 'function') {
-					cmd.exit(function (err) {
-						if (err) console.log(err);
-						process.exit();
-					});
-				} else {
-					process.exit();
-				}
-			});
-
-			cmd.exec(function (err) {
+			cmd.exec(function (err, mode, config) {
 				if (err) {
 					console.log(err);
-					process.exit();
-				} else {
-					//command completed successfully
 				}
-			});
-
+				console.log("command finished.");
+				//command may have started services and is still running.
+				//when the command finishes its job it will call mainCtrl.exit() which
+				//will stop running services and shutdown the application.
+			}, mainCtrl);
 		} else {
 			console.log("You did not issue a command");
 			commands.help();
@@ -77,4 +59,5 @@ if (!module.parent) {
 
 } else {
 	//otrtalk has been loaded as a module
+	//todo - export service manager, profile manager, session and chat managers...
 }
