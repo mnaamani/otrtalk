@@ -27,7 +27,7 @@ if (!module.parent) {
 
 	//otrtalk being run as an application
 	//start the main controller which processes commands and options
-	require("./lib/controllers/main.js").run();
+	require("./lib/main.js").run();
 
 } else {
 	//otrtalk has been loaded as a module
