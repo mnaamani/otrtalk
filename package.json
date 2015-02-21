@@ -18,7 +18,7 @@
 		"url": "git@github.com:mnaamani/node-otr-talk.git"
 	},
 	"dependencies": {
-		"async": "*",
+		"async": "^0.9.0",
 		"get-telehash": "=0.2.1",
 		"enet": "=0.2.5",
 		"otr4-em": "=0.2.0",
