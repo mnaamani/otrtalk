@@ -3,12 +3,14 @@
 
 OTRTALK is a command line based chat application.
 Unlike most instant messenger applications it doesn't rely on centralised servers.
-Instead is utilises a DHT (Distributed Hash Table) similar to bittorrent, called telehash.
+Instead it utilises a DHT (Distributed Hash Table) similar to BitTorrent, called telehash.
 
+The most recent version now has experimental support for discovery of buddies over BitTorrent network. Other discovery
+protocols will be added in future, with more focus towards privacy preserving protocols.
 
 ### Install otrtalk with NPM
 
-    npm -g install otrtalk
+	npm -g install otrtalk
 
 Read the [Tutorial](https://github.com/mnaamani/node-otr-talk/blob/master/Tutorial.md) to get started.
 
@@ -43,3 +45,16 @@ otrtalk should also work over a VPN. You can use the *--interface* option to sel
 
 In the works is a feature to support a NAT traversal mechanism, similar in concept to using a TURN server, which tunnels UDP traffic over a websocket to a udp-proxy server which will act as relay.
 Making it possible to work through a SOCKS proxy (using tsocks) or an HTTP proxy.
+
+### A note on OTR
+
+otrtalk uses the default otr4-em OTR module. If you are on a GNU/Linux or Mac OS X system you can configure new
+profiles to use the native libotr on your system by installing the otr4 module.
+
+Either install otr4 module from npm globally:
+
+	npm -g install otr4
+
+or install it locally after installing otrtalk:
+
+	otrtalk pkg install otr4

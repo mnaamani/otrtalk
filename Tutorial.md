@@ -3,7 +3,7 @@
 Firstly make sure you have installed [nodejs](http://nodejs.org/) for your system.
 
 ### Install otrtalk with `npm`
-Using npm, the node package manager, you can install otrtalk from your command console or shell.
+Using npm, the node package manager, you can install otrtalk from your command console or shell. (you might need to use sudo)
 
 	npm -g install otrtalk
 
@@ -116,23 +116,27 @@ each of you will be presented with the other's key fingerprint to verify and acc
 	Enter SMP secret:
 	[ connect mode ] contacting: Robin ..
 
-	You have connected to someone who claims to be Robin
-	They know the authentication secret.
-	Their public key fingerprint:
+	Authenticated Connection Established.
+	Your public Key fingerprint:
 
-	90D8EA21 4324B1DB 8CD1152D 410514ED 95425C3A
+		AB2ABCEA E4C54F1C 471AC586 1C2124C7 97671ED7
 
-	Do you want to trust this fingerprint [y/n]?
+	Remote public key fingerprint:
+
+		42AAF3BB AA4F180C 6442AF88 80384C41 19A82EAA
+
+	Do you want to accept this connection [y/n]?
+
 
 At this point you **must** verify that it matches your buddy's fingerprint.
 
 After successful verification on both sides, the fingerprint is saved and a secure chat session is started.
 
-	accepted fingerprint.
-	-----------------------------------------------
-	connected to: 173.79.125.116:34467
-	buddy fingerprint: 90D8EA21 4324B1DB 8CD1152D 410514ED 95425C3A
-	-----------------------------------------------
+	--------------------------------------------------------------
+		connected to: Robin
+		address: 148.125.74.14:51981
+		fingerprint: 42AAF3BB AA4F180C 6442AF88 80384C41 19A82EAA
+	--------------------------------------------------------------
 	otrtalk:
 
 At the chat prompt you can type a message and press enter to send it.
@@ -210,13 +214,21 @@ If you know your buddy is on the same LAN/subnet both of you can use the `--broa
 
 	otrtalk chat bob --broadcast
 
+For some interfaces you might need to provide the broadcast address
+
+	otrtalk chat bob --broadcast 29.255.255.255
+
+Discovery through BitTorrent:
+
+	otrtalk chat bob --torrent
+
 
 ### Getting latest version of otrtalk
 
-To check if a new version is available:
+To check and install latest version if available:
 
 	otrtalk update
 
-If a new version is available, use npm to update it:
+You can also manually install latest update with npm: (you way need to use sudo)
 
 	npm -g update otrtalk

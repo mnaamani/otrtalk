@@ -1,6 +1,6 @@
 {
 	"name": "otrtalk",
-	"version": "0.2.1",
+	"version": "0.3.0",
 	"main": "otrtalk.js",
 	"bin": {
 		"otrtalk": "./otrtalk.js"
@@ -31,7 +31,7 @@
 		"ip": "~0.0.1",
 		"debug": "^2.1.1",
 		"npm": "^2.6.0",
-		"bittorrent-dht":"^2.6.4"
+		"bittorrent-dht": "^2.6.4"
 	},
 	"license": "GPL-2.0"
 }
