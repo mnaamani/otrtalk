@@ -49,12 +49,6 @@ Making it possible to work through a SOCKS proxy (using tsocks) or an HTTP proxy
 ### A note on OTR
 
 otrtalk uses the default otr4-em OTR module. If you are on a GNU/Linux or Mac OS X system you can configure new
-profiles to use the native libotr on your system by installing the otr4 module.
-
-Either install otr4 module from npm globally:
+profiles to use the native libotr on your system by installing the otr4 module:
 
 	npm -g install otr4
-
-or install it locally after installing otrtalk:
-
-	otrtalk pkg install otr4
