@@ -12,6 +12,10 @@ protocols will be added in future, with more focus towards privacy preserving pr
 
 	npm -g install otrtalk
 
+Use sudo if necessary:
+
+	sudo -g install otrtalk
+
 Read the [Tutorial](https://github.com/mnaamani/node-otr-talk/blob/master/Tutorial.md) to get started.
 
 ### How it works
@@ -52,3 +56,7 @@ otrtalk uses the default otr4-em OTR module. If you are on a GNU/Linux or Mac OS
 profiles to use the native libotr on your system by installing the otr4 module:
 
 	npm -g install otr4
+
+use sudo if necessary
+
+	sudo npm -g install otr4
