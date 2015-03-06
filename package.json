@@ -30,7 +30,7 @@
 		"request": "~2.10.0",
 		"ip": "~0.0.1",
 		"debug": "^2.1.1",
-		"bittorrent-dht": "^2.6.4"
+		"bittorrent-dht": "^3.0.0"
 	},
 	"license": "GPL-2.0"
 }
