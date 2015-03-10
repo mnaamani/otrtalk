@@ -14,7 +14,7 @@ protocols will be added in future, with more focus towards privacy preserving pr
 
 Use sudo if necessary:
 
-	sudo -g install otrtalk
+	sudo npm -g install otrtalk
 
 Read the [Tutorial](https://github.com/mnaamani/node-otr-talk/blob/master/Tutorial.md) to get started.
 
