@@ -1,12 +1,29 @@
-{ "apps": [
-   {"name":"pidgin","platforms":[
-     {"platform":"linux", "keys":"~/.purple/otr.private_key", "fingerprints":"~/.purple/otr.fingerprints"},
-     {"platform":"darwin","keys":"~/.purple/otr.private_key", "fingerprints":"~/.purple/otr.fingerprints"},
-     {"platform":"win32", "keys":"~/Application Data/.purple/otr.private_key", "fingerprints":"~/Application Data/.purple/otr.fingerprints"}
-   ]},
-   {"name":"adium","platforms":[
-    {"platform":"darwin", "keys":"~/Library/Application Support/Adium 2.0/Users/Default/otr.private_key",
-              "fingerprints":"~/Library/Application Support/Adium 2.0/Users/Default/otr.fingerprints"}
-   ]}
-  ]
+{
+	"apps": [{
+		"name": "pidgin",
+		"platforms": [{
+			"platform": "linux",
+			"keys": "~/.purple/otr.private_key",
+			"fingerprints": "~/.purple/otr.fingerprints",
+			"instags": "~/.purple/otr.instance_tags"
+		}, {
+			"platform": "darwin",
+			"keys": "~/.purple/otr.private_key",
+			"fingerprints": "~/.purple/otr.fingerprints",
+			"instags": "~/.purple/otr.instance_tags"
+		}, {
+			"platform": "win32",
+			"keys": "~/Application Data/.purple/otr.private_key",
+			"fingerprints": "~/Application Data/.purple/otr.fingerprints",
+			"instags": "~/Application Data/.purple/otr.instance_tags"
+		}]
+	}, {
+		"name": "adium",
+		"platforms": [{
+			"platform": "darwin",
+			"keys": "~/Library/Application Support/Adium 2.0/Users/Default/otr.private_key",
+			"fingerprints": "~/Library/Application Support/Adium 2.0/Users/Default/otr.fingerprints",
+			"instags": "~/Library/Application Support/Adium 2.0/Users/Default/otr.instance_tags"
+		}]
+	}]
 }
