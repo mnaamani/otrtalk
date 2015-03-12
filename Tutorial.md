@@ -168,27 +168,14 @@ Removing a buddy:
 	otrtalk buddies remove
 
 
-### Importing OTR keys from Pidgin and Adium
+### Chatting using Pidgin and Adium Identities
 
-Import a key from pidgin, to a new profile Bruce with otrtalk-id @batman.
+If you use piding or adium instant messengers with the OTR plugin you can chat with buddies whom you have verified OTR fingerprints
+by using the `chat-im` command:
 
-	otrtalk import-key pidgin Bruce @batman
+	otrtalk chat-im pidgin
 
-You will be presented with a list of accounts from pidgin to select from.
-
-
-### Advanced chat options
-If you use piding or adium instant messengers with the OTR plugin you can see a list of your trusted buddies fingerprints:
-
-	otrtalk im-buddies
-
-If your buddy has chosen to import his OTR key into otrtalk then you can take advantage of this fact when trying to
-establish trust the first time you chat by using the --piding or --adium option:
-
-	otrtalk chat mybuddy --pidgin
-
-For each peer that connects, their fingerprint will be cross checked against your authenticated buddies and if a match
-is found SMP will be performed otherwise the connection will be rejected. This assists in verifying the correct fingerprint.
+You will be presented with a list of accounts to choose from and the buddy to chat with.
 
 ### Selecting a Network interface to use
 
