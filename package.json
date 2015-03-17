@@ -15,7 +15,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git@github.com:mnaamani/node-otr-talk.git"
+		"url": "git@github.com:mnaamani/otrtalk.git"
 	},
 	"dependencies": {
 		"async": "=0.9.0",
@@ -30,7 +30,8 @@
 		"request": "=2.10.0",
 		"ip": "=0.0.5",
 		"debug": "=2.1.1",
-		"bittorrent-dht": "=3.0.0"
+		"bittorrent-dht": "=3.0.0",
+		"node-dir": "=0.1.6"
 	},
 	"license": "GPL-2.0"
 }
