@@ -1,12 +1,12 @@
 {
 	"name": "otrtalk",
-	"version": "0.4.1",
+	"version": "0.4.2",
 	"main": "otrtalk.js",
 	"bin": {
 		"otrtalk": "./otrtalk.js"
 	},
 	"description": "distributed p2p off-the-record two-party chat",
-	"homepage": "https://github.com/mnaamani/node-otr-talk",
+	"homepage": "https://github.com/mnaamani/otrtalk",
 	"keywords": ["p2p", "messaging", "chat", "privacy", "encrypted", "otr", "telehash", "freedom", "dht", "enet"],
 	"author": {
 		"name": "Mokhtar Naamani",
