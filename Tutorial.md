@@ -41,6 +41,10 @@ Your unique identity is the combination of your otrtalk-id and the fingerprint o
 ### Creating your identity
 
 Your identity in otrtalk is stored in a profile. (You can have multiple profiles if needed)
+
+Profile names must be an alphanumeric strings and may contain dashes, underscores and periods (but cannot begin with a period).
+otrtalk-id is case-sensitive must be alphanumeric strings but may contain dashes, underscores, periods and @ signs.
+
 Profiles are managed using the `profiles` command, followed by one sub-command (`list`, `info`, `add`, `remove`).
 
 Lets pretend you are Bruce Wayne and you want to chat privately with your buddy Robin.
@@ -72,8 +76,6 @@ when the key is generated the profile details will be shown:
 	│ otrtalk-id  │ @batman                                      │
 	├─────────────┼──────────────────────────────────────────────┤
 	│ keystore    │ /home/bruce/.otrtalk/Bruce/priv.keys         │
-	├─────────────┼──────────────────────────────────────────────┤
-	│ otr-module  │ otr4-em                                      │
 	├─────────────┼──────────────────────────────────────────────┤
 	│ fingerprint │ AB2ABCEA E4C54F1C 471AC586 1C2124C7 97671ED7 │
 	└─────────────┴──────────────────────────────────────────────┘
@@ -116,6 +118,9 @@ You can now issue the chat command and pass it your buddy's fingerprint:
 
 `Robin` is the `alias` you will refer to your buddy by. You will be prompted to enter Robin's `otrtalk-id`.
 You will also be prompted for the `SMP authentication secret`.
+
+Buddy aliases must be an alphanumeric strings and may contain dashes, underscores and periods (but cannot begin with a period).
+
 The `--fingerprint` parameter *is* optional but *highly recommended* because it reduces
 the number of sessions and authentication attempts made with peers during the discovery process.
 
