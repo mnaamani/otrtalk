@@ -121,9 +121,6 @@ You will also be prompted for the `SMP authentication secret`.
 
 Buddy aliases must be an alphanumeric strings and may contain dashes, underscores and periods (but cannot begin with a period).
 
-The `--fingerprint` parameter *is* optional but *highly recommended* because it reduces
-the number of sessions and authentication attempts made with peers during the discovery process.
-
 	Select a profile:
 	1) Bruce
 	: 1
@@ -136,23 +133,7 @@ the number of sessions and authentication attempts made with peers during the di
 	Enter SMP secret:
 	contacting Robin (@robin) ...
 
-	Authenticated Connection Established.
-	Your public Key fingerprint:
-
-		AB2ABCEA E4C54F1C 471AC586 1C2124C7 97671ED7
-
-	Remote public key fingerprint:
-
-		42AAF3BB AA4F180C 6442AF88 80384C41 19A82EAA
-
-	Do you want to accept this connection [y/n]?
-
-Assuming Robin is online, network discovery will occur and a connection will be established,
-each of you will be presented with the other's key fingerprint to verify and accept:
-
-At this point you **must** verify that the remote public key fingerprint matches your buddy's fingerprint.
-
-After successful verification on both sides, the fingerprint is saved and a secure chat session is started.
+On successful connection you will enter secure chat:
 
 	--------------------------------------------------------------
 		connected to: Robin
@@ -177,7 +158,7 @@ the /help will display a list available commands:
 
 To terminate the chat press 'Ctrl-D'
 
-The next time you chat with the same buddy, you will not need to enter an SMP secret or fingerprint.
+The next time you chat with the same buddy, you will not need to provide an SMP secret or fingerprint.
 
 ### Managing your buddy list
 
