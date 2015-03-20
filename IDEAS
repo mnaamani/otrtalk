@@ -1,0 +1,39 @@
+notes to self:
+
+otrtalk is an ongoing experiment. the idea is to keep iterating and improving/replacing on the protocols, UI/UX
+
+some things to think about:
+
+UI/UX: need to work on a GUI --> node-webkit/nw
+
+otrtalk-id:
+	is it really necessary, why not get rid of it and just use the OTR fingerprint as our identity.
+	less info to exchange, and seting up profile/buddies easier..
+	this will mean a breaking change in the discovery protocol
+
+exchanging/publishing OTR key fingerprint:
+	how can we easily and securely exchange the OTR key fingerprint with our buddies. (same issues as PGP)
+	especially for if/when we change/loose our keys:
+	look into:
+		storing them in namecoin, dnschain
+		https://keybase.io <<--- cool project
+		...
+
+metadata:
+	- telehash-v1 is not encrypted protocol.. too much metadata flying around:
+	we could encrypt and sign metadata (mainly our ip address:port)
+	key can be derived from shared SMP secret on first connect, and portion of shared sym key
+	(this should also help to ensure we don't connect to or accept connections from nodes we are not interested in)
+	- Using a constant identifier hashname of (otrtalk-id or OTR fingerprint) in discovery protocol can reveal
+	who we are talking to.. should be 'salted' with a shared string/key (derived from SMP secret and on subsequent sessions
+	from shared sym key..) having shared secret from session to session we could also do SMP on every connection setup,
+	not just first time.
+	- moving to telehash-v3 might be a good idea..
+
+anonymity:
+	- using otrtalk on zerotier-one is ok. Adding a 'direct-connect' to ip:port option (skipping discovery/telehash)
+		would be nice.
+	- otrtalk works well over a vpn..
+	- will eventually support using otrtalk over TOR (just need to finish the udp-proxy over http/websockets)
+	- look into running some telehash nodes in i2p and other darknets
+	- maybe add a feature to do a one-time chat with a new temporary profile that is removed after a chat ends.
