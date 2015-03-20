@@ -183,6 +183,7 @@ This could be useful if you are using a vpn and wish to force connection through
 ### NAT problems?
 
 If you are having issues successfully connecting you may be behind a restrictive NAT router.
+otrtalk will exit with 'SNAT detected' message if it detects you are behind a restrictive NAT.
 If your router supports uPNP you can use the --upnp option and otrtalk will try
 to perform port-mapping:
 
@@ -216,12 +217,19 @@ You can also manually install latest update with npm: (you way need to use sudo)
 
 ### A note on OTR
 
-otrtalk uses the default otr4-em OTR module. If you are on a GNU/Linux or Mac OS X system you can configure new
-profiles to use the native libotr on your system by installing the otr4 module
-(Currently this only works if you are using node version pre v0.11)
+otrtalk uses the default otr4-em OTR module. If you are on a GNU/Linux or Mac OS X system, otrtalk can try
+to use the native libotr on your system if found. To add support for this install the otr4 module.
+(Currently this only works if you are using nodejs versions prior to v0.11, also will not work with io.js)
 
 	npm -g install otr4
 
 use sudo if necessary
 
 	sudo npm -g install otr4
+
+A profile should not be encrypted, for otr4 to work. If you created a profile without
+the --no-encrypt option you can decrypt the profile with `remove-password` profiles sub command:
+
+	otrtalk profiles remove-password
+
+Then select the profile to decrypt.

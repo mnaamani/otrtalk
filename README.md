@@ -5,7 +5,7 @@ OTRTALK is a command line based chat application.
 Unlike most instant messenger applications it doesn't rely on centralised servers.
 Instead it utilises a DHT (Distributed Hash Table) similar to BitTorrent, called telehash.
 
-The most recent version now has experimental support for discovery of buddies over mainline BitTorrent DHT network.
+There is also experimental support for discovery of buddies over mainline BitTorrent DHT network.
 Other discovery protocols will be added in future, with more focus towards privacy preserving protocols.
 
 ### Install otrtalk with NPM
@@ -35,6 +35,6 @@ otrtalk currently only supports synchronous two-party messaging, (both parties m
 
 ### Privacy & Security
 * otrtalk does **NOT** anonymise your connection with the remote party in any way.
-* otrtalk uses the **OTR** protocol to offer encryption/authentication and forward secrecy.
-* chat messages are end-to-end encrypted and are exchanged directly between the peers.
+* otrtalk uses the **OTR** protocol to offer end to end encryption, authentication and forward secrecy.
+* chat messages are exchanged directly between the peers.
 * chat messages are not relayed through or stored on any servers.
